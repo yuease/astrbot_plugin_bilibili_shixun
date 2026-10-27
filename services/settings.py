@@ -21,7 +21,6 @@ class Settings:
     dashboard_bindings: str = ""
 
     account_hosting_admin_only: bool = True
-    account_hosting_users: tuple[str, ...] = ()
 
     @classmethod
     def from_config(cls, config):
@@ -34,17 +33,8 @@ class Settings:
         max_users = config.get("max_users", 32)
         bindings = config.get("dashboard_bindings", "")
         hosting_admin_only = config.get("account_hosting_admin_only", True)
-        hosting_users = config.get("account_hosting_users", [])
         if (
             type(hosting_admin_only) is not bool
-            or not isinstance(hosting_users, list)
-            or any(
-                not isinstance(item, str)
-                or len(item) > 1024
-                or len(item.split("|")) != 3
-                or any(not part.strip() for part in item.split("|"))
-                for item in hosting_users
-            )
             or not isinstance(provider, str)
             or len(provider) > 200
             or type(timeout) is not int
@@ -75,5 +65,4 @@ class Settings:
             max_users,
             bindings.strip(),
             hosting_admin_only,
-            tuple("|".join(part.strip() for part in item.split("|")) for item in hosting_users),
         )

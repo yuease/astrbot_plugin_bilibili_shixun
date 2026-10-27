@@ -9,7 +9,7 @@ MESSAGES = {
     "DASHBOARD_BINDING_AMBIGUOUS": "该号码对应多个机器人实例，无法确定管理员档案。请填写目标私聊设置返回的完整 SID。",
     "SUBSCRIPTION_KEYWORDS_REQUIRED": "请先添加长期关键词，再开启关键词来源。",
     "SUBSCRIPTION_NOT_FOUND": "未找到这个 UP 的订阅。请先在页面添加对应 UID，再启停该订阅。",
-    "ACCOUNT_HOSTING_DENIED": "账号托管仅向管理员或获授权的可信用户开放，请联系管理员。公开搜索、个人关键词和兴趣仍可使用。",
+    "ACCOUNT_HOSTING_DENIED": "当前没有账号托管权限，请联系管理员。公开搜索、关键词和兴趣仍可使用。",
     "INVALID_ARGUMENT": "参数无效，请检查字段、日期和数值范围。",
     "ACCESS_DENIED": "此操作仅允许获准的私聊用户使用；群聊禁用，请检查插件访问设置。",
     "USER_LIMIT": "个人档案数量已达管理员配置上限，请联系管理员。",

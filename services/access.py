@@ -117,10 +117,6 @@ def account_hosting_allowed(identity, context, settings):
         admins = {str(v) for v in context.get_config(umo).get("admins_id", [])}
         if not settings.allow_private_users and sender not in admins:
             return False
-        return (
-            not settings.account_hosting_admin_only
-            or sender in admins
-            or "|".join((adapter, platform, sender)) in settings.account_hosting_users
-        )
+        return not settings.account_hosting_admin_only or sender in admins
     except Exception:
         return False

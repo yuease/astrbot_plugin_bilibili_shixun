@@ -25,34 +25,30 @@ plugin = shared_plugin
 
 
 @pytest.mark.parametrize(
-    "admin,restricted,listed,expected",
+    "admin,restricted,expected",
     [
-        (False, True, False, False),
-        (True, True, False, True),
-        (False, True, True, True),
-        (False, False, False, True),
+        (False, True, False),
+        (True, True, True),
+        (True, False, True),
+        (False, False, True),
     ],
 )
-def test_hosting_policy(admin, restricted, listed, expected):
+def test_hosting_policy(admin, restricted, expected):
     identity = chat_identity(event())
     settings = Settings(
         account_hosting_admin_only=restricted,
-        account_hosting_users=("aiocqhttp|bot-1|20001",) if listed else (),
     )
     context = SimpleNamespace(get_config=lambda *a: {"admins_id": ["20001"] if admin else []})
     assert account_hosting_allowed(identity, context, settings) is expected
-    if listed:
-        assert not account_hosting_allowed(dict(identity, platform_id="other"), context, settings)
-        assert not account_hosting_allowed(dict(identity, adapter="qq_official"), context, settings)
 
 
 @pytest.mark.parametrize(
     "config",
     [
         {"account_hosting_admin_only": 1},
-        {"account_hosting_users": "20001"},
-        {"account_hosting_users": ["20001"]},
-        {"account_hosting_users": ["a||b"]},
+        {"account_hosting_admin_only": "true"},
+        {"account_hosting_admin_only": None},
+        {"account_hosting_admin_only": []},
     ],
 )
 def test_invalid_hosting_config(config):
@@ -62,9 +58,7 @@ def test_invalid_hosting_config(config):
 
 def test_defaults_and_config_normalization():
     assert Settings.from_config({}).account_hosting_admin_only
-    assert Settings.from_config(
-        {"account_hosting_users": [" aiocqhttp | bot-1 | 20001 "]}
-    ).account_hosting_users == ("aiocqhttp|bot-1|20001",)
+    assert not hasattr(Settings(), "account_hosting_users")
     assert not account_hosting_allowed(
         {"kind": "dashboard", "username": "admin"}, None, Settings(account_hosting_admin_only=False)
     )
@@ -95,12 +89,13 @@ async def test_default_denial_happens_before_notice_or_network(plugin):
 
 @pytest.mark.asyncio
 async def test_dashboard_binding_rejects_non_admin_even_if_hosting_allowed(plugin):
-    await plugin.users.chat(event())
     plugin.users.settings = replace(
         plugin.settings,
         dashboard_bindings="20001",
-        account_hosting_users=("aiocqhttp|bot-1|20001",),
+        account_hosting_admin_only=False,
     )
+    app = await plugin.users.chat(event())
+    assert app.login.hosting_allowed()
     with pytest.raises(PluginError) as denied:
         await plugin.users.dashboard("admin")
     assert denied.value.code == "DASHBOARD_BINDING_NOT_FOUND"
@@ -127,7 +122,7 @@ async def test_notice_once_before_qr_and_survives_logout_restart(tmp_path, monke
 
     monkeypatch.setattr(login_module.httpx, "AsyncClient", offline_client(response))
     context = SimpleNamespace(get_config=lambda *a: {}, send_message=AsyncMock())
-    settings = Settings(account_hosting_users=("aiocqhttp|bot-1|20001",))
+    settings = Settings(account_hosting_admin_only=False)
     for _ in range(2):
         login = BilibiliLogin(
             tmp_path, context, settings, LOGGER, AsyncMock(), identity=chat_identity(who)
@@ -276,8 +271,8 @@ async def test_pending_scan_cannot_commit_after_revocation(tmp_path, monkeypatch
         await login.close()
 
 
-def test_general_access_switch_overrides_hosting_allowlist():
-    settings = Settings(allow_private_users=False, account_hosting_users=("aiocqhttp|bot-1|20001",))
+def test_general_access_switch_overrides_open_hosting():
+    settings = Settings(allow_private_users=False, account_hosting_admin_only=False)
     assert not account_hosting_allowed(
         chat_identity(event()), SimpleNamespace(get_config=lambda *a: {}), settings
     )

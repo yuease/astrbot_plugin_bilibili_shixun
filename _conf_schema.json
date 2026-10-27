@@ -1,62 +1,56 @@
 {
   "briefing_provider_id": {
-    "description": "简报使用的 AstrBot 模型 ID",
+    "description": "简报模型 ID",
     "type": "string",
     "default": "",
-    "hint": "留空使用 AstrBot 默认聊天模型。只在主动生成简报时调用，聊天检索不会额外调用模型。无需填写密钥或模型端点。"
+    "hint": "留空使用 AstrBot 默认模型。"
   },
   "model_timeout_seconds": {
-    "description": "简报模型等待上限（秒）",
+    "description": "模型超时（秒）",
     "type": "int",
     "default": 90,
-    "hint": "10–300 秒；超时后不会自动重试。供应商是否已经计费不能由等待超时判断。"
+    "hint": "10–300 秒，默认90秒。"
   },
   "dashboard_admins": {
-    "description": "允许使用管理页面的 Dashboard 用户名",
+    "description": "页面访问账号",
     "type": "list",
     "default": [],
-    "hint": "留空使用 AstrBot dashboard.username；仅控制哪些Dashboard登录账号可访问页面，所有获准账号都管理固定绑定的管理员档案。"
+    "hint": "填写 Dashboard 用户名；留空使用默认管理员账号。"
   },
   "bili_auto_relogin": {
-    "description": "OneBot 登录失效时主动发送二维码",
+    "description": "登录失效时发送二维码",
     "type": "bool",
     "default": true,
-    "hint": "仅对 OneBot/aiocqhttp 生效，发给本人绑定私聊且每次失效最多一轮。QQ官方机器人不主动推送；下次使用插件时提示手动发送 /B站登录。"
+    "hint": "仅支持 OneBot；官方机器人需手动发送 /B站登录。"
   },
   "bili_check_interval_minutes": {
-    "description": "B 站登录检查间隔（分钟）",
+    "description": "登录检查间隔（分钟）",
     "type": "int",
     "default": 30,
-    "hint": "5–1440 分钟。采集遇到明确的未登录响应也会标记失效；网络或风控错误不触发重新扫码。"
+    "hint": "5–1440 分钟，默认30分钟。"
   },
   "allow_private_users": {
-    "description": "允许普通用户私聊使用（用户间独立）",
+    "description": "允许普通用户使用",
     "type": "bool",
     "default": true,
-    "hint": "关闭后只允许当前会话配置的管理员私聊；群聊始终禁用。每位用户独立保存登录、订阅、候选和反馈。"
+    "hint": "关闭后仅管理员可用；群聊始终禁用。"
   },
   "max_users": {
-    "description": "最多启用的个人档案数",
+    "description": "用户数量上限",
     "type": "int",
     "default": 32,
-    "hint": "1–128，达到上限拒绝新建，不覆盖或逐出其他用户。页面复用绑定的管理员私聊档案，不单独创建档案。"
+    "hint": "1–128，默认32；达到上限后不再接纳新用户。"
   },
   "dashboard_bindings": {
-    "description": "页面固定绑定的管理员 QQ号或SID",
+    "description": "页面绑定管理员",
     "type": "string",
     "default": "",
-    "hint": "OneBot通常只填管理员QQ号；官方机器人填 /B站状态 返回的SID（也可查看设置工具的user_identity.sid）。该用户须已设为AstrBot管理员，并先私聊发送 /B站状态 建立档案。所有获准Dashboard账号管理这一个管理员档案，不再按Dashboard用户名分档。号码跨机器人实例有歧义时填完整SID；留空不开放插件页面。修改后重载。"
+    "hint": "填管理员QQ号；官方机器人填 /B站状态 返回的SID。填写后重载插件。"
   },
   "account_hosting_admin_only": {
-    "description": "账号托管仅限管理员（允许可信名单例外）",
+    "description": "账号托管仅限管理员",
     "type": "bool",
     "default": true,
-    "hint": "默认仅管理员及下方明确授权的可信用户可扫码、使用关注等登录来源。关闭后所有获准私聊用户可托管账号；公开搜索、个人关键词和兴趣不受此开关影响。修改后重载插件生效。"
-  },
-  "account_hosting_users": {
-    "description": "允许账号托管的可信用户",
-    "type": "list",
-    "default": [],
-    "hint": "每项：平台适配器|机器人实例ID|用户ID。可从工具返回的 user_identity 获取；QQ官方使用OpenID。仅管理员配置，按完整身份匹配。撤销权限并重载后清除该用户本地凭据，暂停其登录来源；历史保留且不转成公开数据。"
+    "hint": "开启：仅管理员可扫码；关闭：所有获准私聊用户可扫码。"
   }
 }
