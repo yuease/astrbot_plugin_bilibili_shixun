@@ -12,10 +12,10 @@
 
 ## 当前已准备
 
-- 稳定身份为 yuease/astrbot_plugin_bilibili_shixun，显示名B站拾讯，元数据repo已是HTTPS GitHub地址；已有GitHub仓库。v0.8.0的代码与发布包完成后再推送，不能把旧远端版本当作新版。
+- 稳定身份为 yuease/astrbot_plugin_bilibili_shixun，显示名B站拾讯，元数据repo已是HTTPS GitHub地址；已有GitHub仓库。以仓库最新提交和安装包版本为准，不把旧版本验收当作新版证据。
 - 源码安装包白名单排除开发环境、运行数据、凭据和缓存；构建时检查16MB上限。依赖置于requirements.txt，持久数据在data/plugin_data下。
 - 用户隔离、私聊权限、凭据不进入模型输出、联网与本地检索边界、错误码及资源上限已有实现和回归；README、PRIVACY.md、SOURCE.md和更新记录随包提供。
-- 保守声明 aiocqhttp，AstrBot仍限定已测试的4.29.1，不把离线模拟外推到其他适配器或宿主版本。
+- v0.9.0增加qq_official和qq_official_webhook的C2C适配声明，但按用户要求暂未测试；真实双用户及两种官方接入方式需在上架前验证。AstrBot仍固定4.29.1，不扩大宿主版本声明。
 
 ## 发布前仍待处理
 

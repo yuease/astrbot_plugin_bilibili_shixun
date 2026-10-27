@@ -5,6 +5,7 @@ import json
 from collections import OrderedDict
 
 from .errors import PluginError
+from .qq_platform import official_c2c
 from .settings import PLUGIN_NAME
 
 
@@ -26,6 +27,7 @@ def authorize_chat(event, context, settings=None):
         if (
             not event.is_private_chat()
             or event.get_group_id()
+            or not official_c2c(event)
             or (
                 not (settings and settings.allow_private_users)
                 and (not event.is_admin() or str(event.get_sender_id()) not in admins)

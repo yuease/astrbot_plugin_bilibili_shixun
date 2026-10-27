@@ -25,7 +25,7 @@ FOLDERS = ("core", "services", "views", ".astrbot-plugin", "docs", "scripts")
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--output", type=Path, default=ROOT / "dist/astrbot_plugin_bilibili_shixun-v0.8.0.zip"
+        "--output", type=Path, default=ROOT / "dist/astrbot_plugin_bilibili_shixun-v0.9.0.zip"
     )
     output = parser.parse_args().output.resolve()
     files = [ROOT / name for name in TOP_LEVEL]

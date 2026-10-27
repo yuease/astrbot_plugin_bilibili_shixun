@@ -40,6 +40,7 @@ from .services.contracts import (
     tool_specs,
 )
 from .services.errors import PluginError, log_failure
+from .services.qq_platform import QQ_OFFICIAL, qq_plain_result
 from .services.settings import MAX_BODY_BYTES, PLUGIN_NAME, Settings
 from .services.users import UserApplications
 
@@ -108,7 +109,7 @@ class BilibiliShixunPlugin(Star):
             log_failure(self.logger, "initialize", "startup", exc)
             raise
         self.logger.info(
-            "B站拾讯 v0.8.0 initialized; registered %s tools: %s",
+            "B站拾讯 v0.9.0 initialized; registered %s tools: %s",
             len(self.tools),
             ", ".join(tool.name for tool in self.tools),
         )
@@ -164,6 +165,17 @@ class BilibiliShixunPlugin(Star):
                 result = await application.tool(operation, params)
                 if operation == "get_settings":
                     result["user_identity"] = chat_identity(event)
+                    if event.get_platform_name() in QQ_OFFICIAL:
+                        result["platform_capabilities"] = {
+                            "private_scope": "qq_c2c",
+                            "user_id_kind": "openid",
+                            "account_notification": "on_use",
+                            "image_delivery": "astrbot_upload",
+                        }
+            if application.login.public_state()["status"] == "expired":
+                result["account_notice"] = (
+                    "当前个人档案的B站登录已失效；公开搜索仍可用，私有来源请在本私聊发送 /B站登录。"
+                )
         except (PluginError, CoreError) as exc:
             result = exc.as_dict()
         except (jsonschema.ValidationError, ValidationError, ValueError, TypeError):
@@ -184,17 +196,22 @@ class BilibiliShixunPlugin(Star):
                 message = "B 站：" + labels.get(result["status"], "状态待确认")
                 if result.get("uid"):
                     message += "\nUID：" + str(result["uid"])
-                message += "\n自动失效提醒：" + ("开启" if result["auto_relogin"] else "关闭")
-                if result["notification_bound"] and not result["proactive_supported"]:
-                    message += "\n当前 QQ 适配器不支持主动二维码推送，可手动发送 /B站登录。"
-                yield event.plain_result(message)
+                if event.get_platform_name() in QQ_OFFICIAL:
+                    message += (
+                        "\n失效时在下次使用插件时提示，不主动推送二维码；请在本私聊发送 /B站登录。"
+                    )
+                else:
+                    message += "\n自动失效提醒：" + ("开启" if result["auto_relogin"] else "关闭")
+                if result.get("login_notice_failed"):
+                    message += "\n上次登录结果通知未能发送；以上登录状态为实际已保存状态。"
             else:
-                yield event.plain_result(result)
+                message = result
+            yield qq_plain_result(event, message)
         except PluginError as exc:
-            yield event.plain_result(exc.message)
+            yield qq_plain_result(event, exc.message)
         except Exception as exc:
             log_failure(self.logger, "account_command", operation, exc)
-            yield event.plain_result("B 站账号操作未完成，请稍后重试。")
+            yield qq_plain_result(event, "B 站账号操作未完成，请稍后重试。")
         event.stop_event()
 
     @filter.command("B站登录")

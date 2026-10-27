@@ -18,10 +18,10 @@
     "hint": "留空使用 AstrBot dashboard.username；各 Dashboard 登录账号独立隔离。私聊访问由 allow_private_users 决定。"
   },
   "bili_auto_relogin": {
-    "description": "B 站登录失效时私聊发送二维码",
+    "description": "OneBot 登录失效时主动发送二维码",
     "type": "bool",
     "default": true,
-    "hint": "仅向该用户完成扫码绑定的私聊发送；每次登录失效仅自动发送一轮。主动推送目前支持 OneBot/aiocqhttp。"
+    "hint": "仅对 OneBot/aiocqhttp 生效，发给本人绑定私聊且每次失效最多一轮。QQ官方机器人不主动推送；下次使用插件时提示手动发送 /B站登录。"
   },
   "bili_check_interval_minutes": {
     "description": "B 站登录检查间隔（分钟）",
@@ -45,6 +45,6 @@
     "description": "Dashboard 到个人私聊的绑定",
     "type": "list",
     "default": [],
-    "hint": "每项：Dashboard用户名|平台适配器|机器人实例ID|用户ID，例如 admin|aiocqhttp|mybot|123456。仅可信管理员配置；不绑定时每个 Dashboard 账号使用独立档案，不能自动读取聊天用户的数据。"
+    "hint": "每项：Dashboard用户名|平台适配器|机器人实例ID|用户ID，例如 admin|aiocqhttp|mybot|123456。仅可信管理员配置；不绑定时每个 Dashboard 账号使用独立档案，不能自动读取聊天用户的数据。 QQ官方机器人的用户ID为OpenID，不是QQ号，可查看实际设置中的user_identity。"
   }
 }

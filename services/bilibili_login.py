@@ -14,6 +14,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from .errors import PluginError, log_failure
+from .qq_platform import QQ_ADAPTERS, QQ_OFFICIAL, official_c2c, qq_message
 
 PASSPORT = "https://passport.bilibili.com"
 API = "https://api.bilibili.com"
@@ -21,7 +22,6 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
     "Referer": "https://www.bilibili.com/",
 }
-QQ_ADAPTERS = {"aiocqhttp", "qq_official", "qq_official_webhook"}
 QR_LOCATIONS = {
     ("passport.bilibili.com", "/h5-app/passport/login/scan"),
     ("account.bilibili.com", "/h5/account-h5/auth/scan-web"),
@@ -144,11 +144,17 @@ class BilibiliLogin:
             "auto_relogin": self.settings.bili_auto_relogin,
             "notification_bound": bool(self.state.get("owner")),
             "proactive_supported": (self.state.get("owner") or {}).get("adapter") == "aiocqhttp",
+            "notification_mode": "on_use"
+            if (self.state.get("owner") or {}).get("adapter") in QQ_OFFICIAL
+            else "proactive",
+            "login_notice_failed": bool(self.state.get("login_notice_failed")),
         }
 
     def _owner(self, event):
         if event.get_platform_name() not in QQ_ADAPTERS:
             raise PluginError("BILI_QQ_PRIVATE_REQUIRED")
+        if not official_c2c(event):
+            raise PluginError("BILI_OFFICIAL_C2C_REQUIRED")
         return {
             "umo": event.unified_msg_origin,
             "sender": str(event.get_sender_id()),
@@ -176,18 +182,17 @@ class BilibiliLogin:
             return False
 
     async def _send(self, owner, message, png=None, event=None):
-        from astrbot.api.event import MessageChain
-        from astrbot.api.message_components import Image, Plain
-
         if not self._authorized(owner):
             raise PluginError("ACCESS_DENIED", status=403)
-        chain = MessageChain(chain=[Plain(message)] + ([Image.fromBytes(png)] if png else []))
+        chain = qq_message(owner["adapter"], message, png)
         if event is not None:
-            await event.send(chain)
+            if self._owner(event) != owner:
+                raise PluginError("ACCESS_DENIED", status=403)
+            await asyncio.wait_for(event.send(chain), 30)
         else:
             if owner["adapter"] != "aiocqhttp":
                 raise PluginError("BILI_PROACTIVE_UNAVAILABLE")
-            sent = await self.context.send_message(owner["umo"], chain)
+            sent = await asyncio.wait_for(self.context.send_message(owner["umo"], chain), 30)
             if sent is False:
                 raise PluginError("BILI_DELIVERY_FAILED")
 
@@ -336,11 +341,25 @@ class BilibiliLogin:
                             revision=uuid.uuid4().hex,
                             last_checked_at=now(),
                             notified_revision=None,
+                            login_notice_failed=False,
                         )
                         await self.persist()
-                    await self._send(
-                        owner, f"B 站登录成功，UID：{uid}。已绑定此私聊，可开始采集。", event=event
-                    )
+                    try:
+                        await self._send(
+                            owner,
+                            f"B 站登录成功，UID：{uid}。已绑定此私聊，可开始采集。",
+                            event=event,
+                        )
+                    except Exception as exc:
+                        # Login is already durably committed. A reply quota or upload
+                        # error must not be reported as a failed login or trigger retries.
+                        log_failure(self.logger, "login_result_delivery", "qr", exc)
+                        async with self.lock:
+                            self.state["login_notice_failed"] = True
+                            try:
+                                await self.persist()
+                            except Exception as state_error:
+                                log_failure(self.logger, "login_notice_state", "qr", state_error)
                     return
             if not self.closing:
                 await self._send(

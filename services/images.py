@@ -15,6 +15,7 @@ from PIL import ImageOps, UnidentifiedImageError
 from ..core.covers import content_image_url
 from .access import authorize_chat
 from .errors import PluginError, log_failure
+from .qq_platform import QQ_OFFICIAL, qq_message
 
 MAX_DOWNLOAD = 12 * 1024 * 1024
 MAX_PIXELS = 32_000_000
@@ -136,13 +137,15 @@ class ImageDelivery:
                     authorize_chat(event, self.context, self.settings)
                     if self.closing():
                         raise PluginError("PLUGIN_CLOSED")
-                    from astrbot.api.event import MessageChain
-                    from astrbot.api.message_components import Image, Plain
-
-                    caption = f"{item['title'][:120]} · {item['author']} · 图片 {index + 1}\n{item['url']}"
+                    adapter = event.get_platform_name()
+                    caption = f"{item['title'][:120]} · {item['author']} · 图片 {index + 1}"
+                    if adapter not in QQ_OFFICIAL:
+                        caption += "\n" + item["url"]
+                    else:
+                        caption = re.sub(r"https?://\S+", "[链接见原文]", caption)
                     try:
                         await asyncio.wait_for(
-                            event.send(MessageChain(chain=[Plain(caption), Image.fromBytes(data)])),
+                            event.send(qq_message(adapter, caption, data)),
                             15,
                         )
                     except Exception:
@@ -155,6 +158,7 @@ class ImageDelivery:
                             "quality": quality,
                             "bytes": len(data),
                             "original_bytes_preserved": quality == "original",
+                            "delivery_adapter": adapter,
                         }
                     )
                 except Exception as exc:

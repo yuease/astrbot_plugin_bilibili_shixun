@@ -4,6 +4,10 @@
 
 环境：Windows、Python 3.12、AstrBot 4.29.1、bilibili-api-python 17.4.2。依赖安装在插件的 `.dev/astrbot-venv` 开发环境，不携带到安装包。
 
+## v0.9.0 · 2026-10-27（未运行测试）
+
+按用户要求，本轮不执行pytest、页面测试、真实网络或QQ收发验证。仅进行Ruff、JavaScript/Python语法、文件改动和源码包结构检查。新适配及OneBot回归仍待验证。以下99项Python和5项页面结果仅属于v0.8.0。
+
 ## v0.8.0 · 2026-10-27
 
 99项Python回归和5项页面逻辑检查通过。新增17项多用户专项覆盖可信身份选择、设置与撤销、相同B站UID的内容/简报/反馈、临时任务及登录隔离、SDK Set-Cookie不跨用户且匿名客户端独立、Dashboard鉴权和绑定、平台实例、重载恢复、上限及配置。SDK客户端测试使用真实HTTPXClient封装及模拟HTTP响应。Python编译、Ruff及页面语法检查通过。未进行真实双用户QQ、Linux新装、完整GUI或市场发布验收。详见update-v0.8.0.md。
