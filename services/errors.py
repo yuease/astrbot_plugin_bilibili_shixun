@@ -5,7 +5,8 @@ from traceback import extract_tb
 
 MESSAGES = {
     "INVALID_ARGUMENT": "参数无效，请检查字段、日期和数值范围。",
-    "ACCESS_DENIED": "仅允许当前会话配置中的 AstrBot 管理员私聊使用。",
+    "ACCESS_DENIED": "此操作仅允许获准的私聊用户使用；群聊禁用，请检查插件访问设置。",
+    "USER_LIMIT": "个人档案数量已达管理员配置上限，请联系管理员。",
     "DASHBOARD_DENIED": "需要已认证且获准访问此插件的 Dashboard 管理员。",
     "NOT_CONFIGURED": "请先在订阅来源页面保存至少一个有效来源。",
     "SETTINGS_CONFLICT": "设置已变化，请刷新页面后再保存。",

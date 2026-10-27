@@ -56,3 +56,18 @@ test('polling cannot reload the form while its own save is in progress', () => {
   p.run("pending=false;syncRemoteSettings('new')");
   assert.equal(p.fills.length, 0);
 });
+
+test('draft keys differ between authenticated dashboard profiles', () => {
+  const p = page();
+  const app = fs.readFileSync(path.join(__dirname, '../views/bilibili-shixun/app.js'), 'utf8');
+  for (const name of ['draftKey', 'localKey']) {
+    const source = app.split('\n').find(line => line.startsWith(`function ${name}(`));
+    vm.runInContext(source, p.context);
+  }
+  p.run("state={profile:{profile_id:'same'},user_scope:{key:'user-a'}}");
+  const a = p.run("[draftKey(),localKey('sources')]");
+  p.run("state={profile:{profile_id:'same'},user_scope:{key:'user-b'}}");
+  const b = p.run("[draftKey(),localKey('sources')]");
+  assert.notEqual(a[0], b[0]);
+  assert.notEqual(a[1], b[1]);
+});

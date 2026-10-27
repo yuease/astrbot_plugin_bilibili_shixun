@@ -24,8 +24,13 @@ from pydantic.dataclasses import dataclass
 
 from .core.core_errors import CoreError
 from .core.library import RequestError
-from .services.access import ReadBudget, authorize_chat, authorize_web, chat_request_id
-from .services.application import Application
+from .services.access import (
+    ReadBudget,
+    authorize_chat,
+    authorize_web,
+    chat_identity,
+    chat_request_id,
+)
 from .services.contracts import (
     KINDS,
     SCHEMAS,
@@ -36,6 +41,7 @@ from .services.contracts import (
 )
 from .services.errors import PluginError, log_failure
 from .services.settings import MAX_BODY_BYTES, PLUGIN_NAME, Settings
+from .services.users import UserApplications
 
 IDENTIFIER = re.compile(r"^[A-Za-z0-9_-]{1,100}$")
 
@@ -55,8 +61,8 @@ class BilibiliShixunPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.settings = Settings.from_config(config)
-        root = Path(get_astrbot_plugin_data_path()).resolve() / PLUGIN_NAME / "runtime-direct-v1"
-        self.application = Application(root, context, self.settings, self.logger)
+        root = Path(get_astrbot_plugin_data_path()).resolve() / PLUGIN_NAME / "users-v1"
+        self.users = UserApplications(root, context, self.settings, self.logger)
         self.budget = ReadBudget()
         self._terminated = False
         self._close_task = None
@@ -97,12 +103,12 @@ class BilibiliShixunPlugin(Star):
 
     async def initialize(self):
         try:
-            await self.application.start()
+            await self.users.start()
         except Exception as exc:
             log_failure(self.logger, "initialize", "startup", exc)
             raise
         self.logger.info(
-            "B站拾讯 v0.7.0 initialized; registered %s tools: %s",
+            "B站拾讯 v0.8.0 initialized; registered %s tools: %s",
             len(self.tools),
             ", ".join(tool.name for tool in self.tools),
         )
@@ -110,7 +116,7 @@ class BilibiliShixunPlugin(Star):
     async def call_tool(self, event, operation, params):
         key = uuid.uuid4().hex
         try:
-            authorize_chat(event, self.context)
+            authorize_chat(event, self.context, self.settings)
             if operation not in SCHEMAS:
                 raise PluginError("INVALID_ARGUMENT")
             if (
@@ -126,14 +132,15 @@ class BilibiliShixunPlugin(Star):
                 raise CoreError("SOURCE_TYPE_UNSUPPORTED")
             jsonschema.Draft202012Validator(SCHEMAS[operation]).validate(params)
             self.budget.reserve(event, operation, params)
+            application = await self.users.chat(event)
             if operation == "refresh_sources":
-                result = await self.application.refresh_sources(
+                result = await application.refresh_sources(
                     chat_request_id(event, operation),
                     status_only=params.get("action") == "status",
                     wait_seconds=params.get("wait_seconds", 10),
                 )
             elif operation == "send_item_images":
-                result = await self.application.send_item_images(
+                result = await application.send_item_images(
                     event, params, chat_request_id(event, operation)
                 )
             elif operation in ("update_settings", "undo_settings"):
@@ -148,13 +155,15 @@ class BilibiliShixunPlugin(Star):
                         ).encode()
                     ).hexdigest()
                 )
-                result = await self.application.change_settings(operation, params, request_id)
+                result = await application.change_settings(operation, params, request_id)
             elif operation == "search_bilibili":
-                result = await self.application.search_bilibili(
+                result = await application.search_bilibili(
                     params, chat_request_id(event, operation)
                 )
             else:
-                result = await self.application.tool(operation, params)
+                result = await application.tool(operation, params)
+                if operation == "get_settings":
+                    result["user_identity"] = chat_identity(event)
         except (PluginError, CoreError) as exc:
             result = exc.as_dict()
         except (jsonschema.ValidationError, ValidationError, ValueError, TypeError):
@@ -167,8 +176,9 @@ class BilibiliShixunPlugin(Star):
     async def _account_command(self, event, operation):
         event.should_call_llm(False)
         try:
-            authorize_chat(event, self.context)
-            result = await self.application.account_action(operation, event)
+            authorize_chat(event, self.context, self.settings)
+            application = await self.users.chat(event)
+            result = await application.account_action(operation, event)
             if isinstance(result, dict):
                 labels = {"valid": "已登录", "expired": "登录已失效", "not_logged_in": "尚未登录"}
                 message = "B 站：" + labels.get(result["status"], "状态待确认")
@@ -245,7 +255,14 @@ class BilibiliShixunPlugin(Star):
                     params["request_id"] = key
                 else:
                     params["body"] = body
-            result = await self.application.web(operation, params)
+            application = await self.users.dashboard(request.username)
+            result = await application.web(operation, params)
+            if operation == "state":
+                result["user_scope"] = {
+                    "isolated": True,
+                    "key": application.root.name,
+                    "label": "当前 Dashboard 登录账号的独立档案；若已配置私聊绑定则使用该个人档案。",
+                }
             if operation == "download":
 
                 async def report():
@@ -316,7 +333,7 @@ class BilibiliShixunPlugin(Star):
             return
         self._terminated = True
         try:
-            self._close_task = asyncio.create_task(self.application.close())
+            self._close_task = asyncio.create_task(self.users.close())
             await asyncio.shield(self._close_task)
         finally:
             self._unregister()

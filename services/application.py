@@ -21,8 +21,11 @@ from .runtime import Runtime
 
 
 class Application:
-    def __init__(self, root, context, settings, logger):
+    def __init__(
+        self, root, context, settings, logger, *, source_gate=None, model_gate=None, umo=None
+    ):
         self.root, self.context, self.settings, self.logger = root, context, settings, logger
+        self.source_gate, self.model_gate, self.umo = source_gate, model_gate, umo
         self.runtime, self.jobs, self.lease = (
             Runtime(root, settings),
             JobStore(root),
@@ -42,7 +45,7 @@ class Application:
         self.next_due = None
         self.active = None
         self.job_tasks = {}
-        self.images = ImageDelivery(context, self.io, logger, lambda: self.closing)
+        self.images = ImageDelivery(context, self.io, logger, lambda: self.closing, settings)
 
     async def io(self, function, *args, **kwargs):
         # Shield the thread from HTTP/tool cancellation and retain it until it
@@ -77,8 +80,15 @@ class Application:
                 )
                 await self.login.start()
                 await self.io(self.runtime.bind_account, self.login.public_state().get("uid") or "")
-                self.source = BilibiliSource(loop, self.login, self.logger)
-                self.model = AstrBotModel(self.context, self.settings, loop, self.logger)
+                self.source = BilibiliSource(loop, self.login, self.logger, self.source_gate)
+                self.model = AstrBotModel(
+                    self.context,
+                    self.settings,
+                    loop,
+                    self.logger,
+                    gate=self.model_gate,
+                    umo=self.umo,
+                )
                 self.started = True
                 self.scheduler = asyncio.create_task(self._schedule())
             except BaseException:
@@ -581,5 +591,8 @@ class Application:
                 await asyncio.gather(*tuple(self.tasks), return_exceptions=True)
             while self.threads:
                 await asyncio.gather(*tuple(self.threads), return_exceptions=True)
+            if self.source is not None and hasattr(self.source, "transport"):
+                await self.source.transport.close()
+                await self.source.public_transport.close()
             self.lease.close()
             self.started = False

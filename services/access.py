@@ -19,21 +19,31 @@ def chat_request_id(event, operation):
     return "chat-" + hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
 
 
-def authorize_chat(event, context):
+def authorize_chat(event, context, settings=None):
     try:
         config = context.get_config(event.unified_msg_origin)
         admins = {str(value) for value in config.get("admins_id", [])}
         if (
             not event.is_private_chat()
             or event.get_group_id()
-            or not event.is_admin()
-            or str(event.get_sender_id()) not in admins
+            or (
+                not (settings and settings.allow_private_users)
+                and (not event.is_admin() or str(event.get_sender_id()) not in admins)
+            )
         ):
             raise PluginError("ACCESS_DENIED", status=403)
     except PluginError:
         raise
     except Exception:
         raise PluginError("ACCESS_DENIED", status=403) from None
+
+
+def chat_identity(event):
+    """Only framework identity is used, never model arguments or message text."""
+    values = [event.get_platform_name(), event.get_platform_id(), str(event.get_sender_id())]
+    if any(not isinstance(v, str) or not v.strip() or len(v) > 256 for v in values):
+        raise PluginError("ACCESS_DENIED", status=403)
+    return {"kind": "chat", "adapter": values[0], "platform_id": values[1], "sender": values[2]}
 
 
 def authorize_web(request, context, settings):

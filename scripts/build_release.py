@@ -14,6 +14,7 @@ TOP_LEVEL = (
     "requirements.txt",
     "README.md",
     "SOURCE.md",
+    "PRIVACY.md",
     "CHANGELOG.md",
     "ruff.toml",
     ".gitignore",
@@ -24,7 +25,7 @@ FOLDERS = ("core", "services", "views", ".astrbot-plugin", "docs", "scripts")
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--output", type=Path, default=ROOT / "dist/astrbot_plugin_bilibili_shixun-v0.7.0.zip"
+        "--output", type=Path, default=ROOT / "dist/astrbot_plugin_bilibili_shixun-v0.8.0.zip"
     )
     output = parser.parse_args().output.resolve()
     files = [ROOT / name for name in TOP_LEVEL]
@@ -47,6 +48,8 @@ def main():
             entry.compress_type = zipfile.ZIP_DEFLATED
             entry.external_attr = 0o100644 << 16
             archive.writestr(entry, path.read_bytes())
+    if output.stat().st_size > 16 * 1024 * 1024:
+        raise RuntimeError("安装包超过 AstrBot 插件市场16MB上限")
     print(f"Source archive: {output}")
     print(f"Files: {len(files)}; SHA-256: {hashlib.sha256(output.read_bytes()).hexdigest()}")
 

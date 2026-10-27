@@ -9,10 +9,11 @@ from .errors import log_failure
 
 
 class AstrBotModel:
-    def __init__(self, context, settings, loop, logger):
+    def __init__(self, context, settings, loop, logger, *, gate=None, umo=None):
         self.context, self.settings, self.loop, self.logger = context, settings, loop, logger
         self.model_name = settings.briefing_provider_id or "AstrBot default"
         self.usage = None
+        self.gate, self.umo = gate, umo
 
     def select(self, prompt, schema):
         """Called only by a domain job thread, never the host event loop."""
@@ -21,10 +22,20 @@ class AstrBotModel:
         return future.result()
 
     async def _select(self, prompt, schema):
+        if self.gate is not None:
+            async with self.gate:
+                return await self._select_owned(prompt, schema)
+        return await self._select_owned(prompt, schema)
+
+    async def _select_owned(self, prompt, schema):
         self.usage = None
         provider_id = self.settings.briefing_provider_id
         if not provider_id:
-            provider = await self.context.get_using_provider_async()
+            provider = (
+                await self.context.get_using_provider_async(self.umo)
+                if self.umo
+                else await self.context.get_using_provider_async()
+            )
             if provider is None:
                 raise DiagnosedError("MODEL_CONFIG_MISSING")
             provider_id = provider.meta().id

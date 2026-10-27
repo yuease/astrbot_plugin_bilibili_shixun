@@ -437,10 +437,11 @@ async def test_native_tools_authorize_before_settings_or_anonymous_search(tmp_pa
         )
         assert changed_interest["settings_saved"] and changed_interest["learning_continues"]
         event.is_private_chat = lambda: False
-        plugin.application.source.search_public = AsyncMock()
+        application = await plugin.users.chat(event)
+        application.source.search_public = AsyncMock()
         denied = json.loads(await plugin.call_tool(event, "search_bilibili", {"keyword": "test"}))
         assert denied["error_code"] == "ACCESS_DENIED"
-        assert plugin.application.source.search_public.await_count == 0
+        assert application.source.search_public.await_count == 0
         event.is_private_chat = lambda: True
         unsupported = json.loads(
             await plugin.call_tool(event, "search_items", {"sources": [{"kind": "rss"}]})

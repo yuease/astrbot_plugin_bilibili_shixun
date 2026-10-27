@@ -26,7 +26,7 @@ const hasSources = () => state?.capabilities?.sources_v1 === true;
 const stableLearning = () => state?.capabilities?.stable_preferences_v1 === true;
 const splitList = text => [...new Set(text.split(/[,，\n]/).map(x=>x.trim()).filter(Boolean))];
 function activeSources(profile){return profile.sources || {keyword_search:{enabled:true},up_uploads:{enabled:false,uids:[]},following_videos:{enabled:false,uid:''}};}
-function draftKey(){return 'bilibili-shixun.sources-draft.v1.'+(state?.profile?.profile_id||'default');}
+function draftKey(){return 'bilibili-shixun.sources-draft.v2.'+(state?.user_scope?.key||'unbound')+'.'+(state?.profile?.profile_id||'default');}
 function sourceText(article){
   const labels=Array.isArray(article.sources)?article.sources.map(s=>s.label||({keyword_search:'关键词搜索',up_uploads:'UP 投稿',following_videos:'关注动态'}[s.kind])||'订阅来源'):[];
   if(!labels.length&&article.matched_keywords?.length)labels.push(...article.matched_keywords.map(k=>'关键词 · '+k));
@@ -58,7 +58,7 @@ function followingStatus(){
   const kind=$('#following-mode')?.value==='dynamics'?'following_dynamics':'following_videos';
   const entry=(state?.source_status||[]).find(s=>s.kind===kind&&s.key===uid);
   const labels={ready:'最近检查可用',configured:'登录配置已提供，尚未验证可用性',missing_credentials:'尚未配置对应账号的登录信息',auth_expired:'登录已过期，请在 QQ 私聊发送 /B站登录',error:'最近采集失败，请检查 B 站登录和网络',unknown:'登录状态尚未检查',disabled:'当前未启用'};
-  $('#following-status').textContent=kind==='following_dynamics'&&!sourceReady()?'综合动态等待接入；视频来源的检查结果不代表此来源可用':!hasSources()?'等待后端接入；尚未检查登录状态':!uid?'请先在 QQ 管理员私聊发送 /B站登录':labels[entry?.status]||labels.unknown;
+  $('#following-status').textContent=kind==='following_dynamics'&&!sourceReady()?'综合动态等待接入；视频来源的检查结果不代表此来源可用':!hasSources()?'等待后端接入；尚未检查登录状态':!uid?'请先在 QQ 私聊发送 /B站登录':labels[entry?.status]||labels.unknown;
 }
 const statusNames = {collection:'采集完成',completed:'已生成', empty:'暂无推荐', preview:'采集预览', failed:'运行失败', started:'正在采集', collected:'正在处理'};
 const feedbackNames = {useful:'有用', not_useful:'没用', later:'暂时不想看'};
@@ -94,7 +94,9 @@ function renderJob(){
 }
 async function refresh(loadDetail=true){
   const previousVersion=state?.profile_version;
-  state=await api('/api/state');$('#connection-error').hidden=true;
+  const next=await api('/api/state');
+  if(state?.user_scope?.key&&state.user_scope.key!==next.user_scope?.key){document.querySelector('main').replaceChildren();location.reload();return;}
+  state=next;$('#connection-error').hidden=true;
   syncRemoteSettings(previousVersion);
   sourceSummary();renderPool();renderAccount();
   $('#feedback-count').textContent=state.stats.feedback_count;
@@ -204,7 +206,7 @@ const sourceReady=()=>state?.capabilities?.sources_v2===true;
 const filterReady=()=>state?.capabilities?.filter_rules_v1===true;
 const poolReady=()=>state?.capabilities?.candidate_pool_v1===true;
 let filterBase=null, loadedRules=[];
-function localKey(area){return `bilibili-shixun.${area}.v2.${state?.profile?.profile_id||'default'}`;}
+function localKey(area){return `bilibili-shixun.${area}.v3.${state?.user_scope?.key||'unbound'}.${state?.profile?.profile_id||'default'}`;}
 function readDraft(area){try{return JSON.parse(draftStorage.getItem(localKey(area))||'null');}catch{return null;}}
 function defaultPlan(){const s=activeSources(state.profile);return {keyword_search:{enabled:!!s.keyword_search?.enabled},ups:(s.up_uploads?.uids||[]).map(uid=>({uid,enabled:!!s.up_uploads.enabled,scope:'uploads',content_type:'all'})),following:{enabled:!!s.following_videos?.enabled,uid:s.following_videos?.uid||'',scope:'videos',content_type:'all'}};}
 function options(values,current){return values.map(([v,t])=>`<option value="${v}" ${v===current?'selected':''}>${t}</option>`).join('');}

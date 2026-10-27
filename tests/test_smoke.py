@@ -489,7 +489,8 @@ async def test_astrbot_plugin_load_state_and_cleanup(tmp_path, monkeypatch):
             "registered %s tools" in call.args[0] and call.args[1] == 9
             for call in info.call_args_list
         )
-        state = await plugin.application.web("state", {})
+        application = await plugin.users.dashboard("smoke-admin")
+        state = await application.web("state", {})
         assert state["bilibili_account"]["status"] == "not_logged_in"
         assert len(context.provider_manager.llm_tools.func_list) == 9
         from astrbot_plugin_bilibili_shixun.services.contracts import TOOL_NAMES
@@ -501,7 +502,7 @@ async def test_astrbot_plugin_load_state_and_cleanup(tmp_path, monkeypatch):
     finally:
         await plugin.terminate()
     assert not context.registered_web_apis and not context.provider_manager.llm_tools.func_list
-    assert not plugin.application.tasks and not plugin.application.threads
+    assert not application.tasks and not application.threads
 
 
 @pytest.mark.asyncio
@@ -543,12 +544,13 @@ async def test_chat_refresh_permissions_replay_progress_and_retrieval(tmp_path, 
         await plugin.initialize()
         assert (await invoke({"action": "status"}))["status"] == "not_started"
         assert (await invoke())["error_code"] == "NOT_CONFIGURED"
-        await plugin.application.io(seed, plugin.application.runtime)
+        application = await plugin.users.chat(event)
+        await application.io(seed, application.runtime)
         event.is_private_chat = lambda: False
         assert (await invoke())["error_code"] == "ACCESS_DENIED"
         event.is_private_chat = lambda: True
-        plugin.application.login.state.update(status="valid", uid="1001")
-        plugin.application.source = SimpleNamespace(fetch=fetch)
+        application.login.state.update(status="valid", uid="1001")
+        application.source = SimpleNamespace(fetch=fetch)
 
         event.is_private_chat = lambda: False
         assert (await invoke())["error_code"] == "ACCESS_DENIED"
@@ -565,7 +567,7 @@ async def test_chat_refresh_permissions_replay_progress_and_retrieval(tmp_path, 
         assert (await invoke({"action": "status"}))["status"] == "running"
 
         release.set()
-        await asyncio.wait_for(plugin.application.idle.wait(), 3)
+        await asyncio.wait_for(application.idle.wait(), 3)
         done = await invoke({"action": "status"})
         assert done["status"] == "completed" and done["operation_finished"]
         assert (await invoke())["id"] == first["id"]
@@ -579,7 +581,7 @@ async def test_chat_refresh_permissions_replay_progress_and_retrieval(tmp_path, 
         assert image_result["error_code"] == "IMAGE_NOT_FOUND"
         assert context.llm_generate.await_count == 0
 
-        await plugin.application.install_account("1002")
+        await application.install_account("1002")
         assert (await invoke({"action": "status"}))["status"] == "not_started"
         assert (await invoke())["error_code"] == "REQUEST_CONFLICT"
     finally:

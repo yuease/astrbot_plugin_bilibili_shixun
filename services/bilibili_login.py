@@ -169,7 +169,7 @@ class BilibiliLogin:
                 session.message_type == MessageType.FRIEND_MESSAGE
                 and session.platform_id == owner["platform_id"]
                 and session.session_id == owner["sender"]
-                and owner["sender"] in admins
+                and (self.settings.allow_private_users or owner["sender"] in admins)
                 and owner["adapter"] in QQ_ADAPTERS
             )
         except Exception:

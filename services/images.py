@@ -87,9 +87,10 @@ async def download_image(client, url, *, original=False):
 
 
 class ImageDelivery:
-    def __init__(self, context, io, logger, closing):
+    def __init__(self, context, io, logger, closing, settings=None):
         self.context, self.io, self.logger, self.closing = context, io, logger, closing
         self.receipts = OrderedDict()
+        self.settings = settings
 
     async def send(self, event, item, indices, key, quality="original"):
         # The application holds its account/settings lock for the entire delivery.
@@ -132,7 +133,7 @@ class ImageDelivery:
                         data = await self.io(
                             original_image if quality == "original" else resize_image, data
                         )
-                    authorize_chat(event, self.context)
+                    authorize_chat(event, self.context, self.settings)
                     if self.closing():
                         raise PluginError("PLUGIN_CLOSED")
                     from astrbot.api.event import MessageChain

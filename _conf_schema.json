@@ -15,18 +15,36 @@
     "description": "允许使用管理页面的 Dashboard 用户名",
     "type": "list",
     "default": [],
-    "hint": "留空使用 AstrBot dashboard.username；聊天权限由当前会话配置中的 admins_id 决定。"
+    "hint": "留空使用 AstrBot dashboard.username；各 Dashboard 登录账号独立隔离。私聊访问由 allow_private_users 决定。"
   },
   "bili_auto_relogin": {
     "description": "B 站登录失效时私聊发送二维码",
     "type": "bool",
     "default": true,
-    "hint": "只发送到完成扫码绑定的管理员私聊；每次登录失效仅自动发送一轮。主动推送目前支持 OneBot/aiocqhttp。"
+    "hint": "仅向该用户完成扫码绑定的私聊发送；每次登录失效仅自动发送一轮。主动推送目前支持 OneBot/aiocqhttp。"
   },
   "bili_check_interval_minutes": {
     "description": "B 站登录检查间隔（分钟）",
     "type": "int",
     "default": 30,
     "hint": "5–1440 分钟。采集遇到明确的未登录响应也会标记失效；网络或风控错误不触发重新扫码。"
+  },
+  "allow_private_users": {
+    "description": "允许普通用户私聊使用（用户间独立）",
+    "type": "bool",
+    "default": true,
+    "hint": "关闭后只允许当前会话配置的管理员私聊；群聊始终禁用。每位用户独立保存登录、订阅、候选和反馈。"
+  },
+  "max_users": {
+    "description": "最多启用的个人档案数",
+    "type": "int",
+    "default": 32,
+    "hint": "1–128，包含 Dashboard 独立档案；达上限拒绝新建，不覆盖或逐出其他用户。调低上限后超额档案暂停恢复，数据保留。"
+  },
+  "dashboard_bindings": {
+    "description": "Dashboard 到个人私聊的绑定",
+    "type": "list",
+    "default": [],
+    "hint": "每项：Dashboard用户名|平台适配器|机器人实例ID|用户ID，例如 admin|aiocqhttp|mybot|123456。仅可信管理员配置；不绑定时每个 Dashboard 账号使用独立档案，不能自动读取聊天用户的数据。"
   }
 }

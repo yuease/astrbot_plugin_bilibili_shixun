@@ -7,6 +7,7 @@ from ..core.attachments import poll_attachment
 from ..core.bilibili_items import dynamic_batch, video_batch
 from ..core.source_types import SourceError
 from .errors import PluginError, log_failure
+from .sdk_transport import SDKTransport, sdk_request_context
 
 
 def search_results(data):
@@ -30,12 +31,28 @@ def search_results(data):
     raise SourceError("SOURCE_PARSE")
 
 
-class BilibiliSource:
-    def __init__(self, loop, login, logger):
-        self.loop, self.login, self.logger = loop, login, logger
+class SourceGate:
+    def __init__(self):
         self.lock = asyncio.Lock()
         self.last_request = 0.0
+
+
+class BilibiliSource:
+    def __init__(self, loop, login, logger, gate=None):
+        self.loop, self.login, self.logger = loop, login, logger
+        self.gate = gate or SourceGate()
+        self.lock = self.gate.lock
         self.vote_cache = {}
+        self.transport = SDKTransport()
+        self.public_transport = SDKTransport()
+
+    @property
+    def last_request(self):
+        return self.gate.last_request
+
+    @last_request.setter
+    def last_request(self, value):
+        self.gate.last_request = value
 
     async def _complete_polls(self, batch, credential, deadline):
         from bilibili_api import Api
@@ -93,6 +110,7 @@ class BilibiliSource:
             self._fetch(ref, account_scope, cursor, timeout), self.loop
         ).result()
 
+    @sdk_request_context
     async def search_public(self, keyword, remote_page=1, timeout=20):
         from bilibili_api import Api, Credential, request_log
         from bilibili_api.utils.utils import get_api
@@ -139,6 +157,7 @@ class BilibiliSource:
                 else "SOURCE_HTTP"
             ) from None
 
+    @sdk_request_context
     async def _fetch(self, ref, account_scope, cursor, timeout):
         from bilibili_api import Api, Credential, dynamic, request_log, user
         from bilibili_api.utils.utils import get_api
