@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>B站拾讯 · 个人信息简报</title><link rel="icon" href="./favicon.svg"><link rel="stylesheet" href="./style.css"><script type="module" src="./transport.js"></script><script type="module" src="./app.js"></script></head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="#briefing" data-view="briefing"><span class="brand-mark">拾</span><span>B站拾讯<small>发现值得关注的内容</small></span></a>
+    <div class="nav-caption">你的信息工作台</div>
+    <nav aria-label="主导航">
+      <button data-view="briefing" class="nav active"><span class="nav-icon">▤</span>我的简报</button>
+      <button data-view="sources" class="nav"><span class="nav-icon">⊞</span>订阅来源</button>
+      <button data-view="filters" class="nav"><span class="nav-icon">⊘</span>过滤与采集</button>
+      <button data-view="history" class="nav"><span class="nav-icon">◷</span>历史记录</button>
+      <button data-view="preferences" class="nav"><span class="nav-icon">◎</span>偏好学习</button>
+      <button data-view="settings" class="nav"><span class="nav-icon">⚙</span>兴趣设置</button>
+    </nav>
+    <div class="sidebar-note"><span class="tiny-line"></span><p>少一点信息噪声，<br>多一点值得阅读。</p><small>从你的关键词出发，<br>为新的发现留一点空间。</small></div>
+    <div class="local-status"><span class="status-dot"></span>插件内运行<span>B 站直连</span></div>
+  </aside>
+  <main>
+    <header class="topbar"><span id="breadcrumb">工作台 / 我的简报</span><span class="top-date" id="today"></span></header>
+    <div class="content">
+      <div id="plugin-initialization" class="alert" role="status" hidden></div>
+      <div id="connection-error" class="alert error" role="alert" hidden></div>
+      <section id="job-panel" class="job-panel" aria-live="polite" hidden></section>
+      <section id="view-briefing" class="view">
+        <div class="page-head"><div><div class="eyebrow">YOUR PERSONAL BRIEFING</div><h1>把注意力，留给值得的内容。</h1><p class="subtitle">从兴趣出发，发现有用的内容，也留一点意外收获。</p></div><div class="head-actions"><button id="preview" class="button secondary">仅采集预览</button><button id="generate" class="button primary">＋ 生成新简报</button></div></div>
+        <div class="context-strip"><span class="strip-label">订阅来源</span><div id="keyword-chips" class="chips"></div><button class="text-button" data-view="sources">管理来源 <span>↗</span></button></div>
+        <div id="pool-status" class="pipeline-grid" aria-live="polite"></div><div class="reading-layout"><div class="reading-main">
+          <div class="section-heading"><div><h2 id="briefing-heading">最新简报</h2><p id="briefing-meta" class="muted"></p></div><a id="download" class="text-button" hidden>导出 Markdown ↓</a></div>
+          <div id="briefing-body" aria-live="polite"><div class="empty"><div class="empty-symbol">▤</div><h2>正在读取你的简报…</h2></div></div>
+        </div><aside class="reading-aside">
+          <section class="side-section"><div class="eyebrow">RECOMMENDATION MIX</div><h3>熟悉的兴趣，新的发现</h3><div class="mix-bar" id="mix-bar"></div><div class="mix-labels"><span><i class="regular-dot"></i>常规 <b id="regular-count">—</b></span><span><i class="explore-dot"></i>探索 <b id="explore-count">—</b></span></div><p class="muted" id="mix-description">探索来自你已启用的订阅来源，不会自动扩展关键词或作者。</p></section>
+          <section class="side-section"><div class="eyebrow">YOUR FEEDBACK MATTERS</div><h3>越用，越懂你的兴趣</h3><p class="muted">有用就留下一个反馈。暂时不想看，也不代表不喜欢。</p><div class="small-stat"><strong id="feedback-count">—</strong><span>条有效反馈</span></div><button class="text-button" data-view="preferences">查看后台学习 →</button></section>
+          <p class="source-note">内容概述依据 B 站标题、简介与元数据生成，未读取视频、字幕或图片内容。</p>
+        </aside></div>
+      </section>
+      <section id="view-sources" class="view" hidden>
+        <div class="page-head"><div><div class="eyebrow">CHOOSE YOUR SIGNALS</div><h1>好信息，从你选择的来源开始。</h1><p class="subtitle">搜索感兴趣的主题，订阅信任的作者，把关注更新汇成一份简报。</p></div></div>
+        <section class="source-config"><h2>B 站账号</h2><p id="bilibili-account-status" role="status">正在读取登录状态。</p><p class="field-note">在 QQ 管理员私聊发送 <code>/B站登录</code> 获取二维码，用 B 站 App 扫码确认。<code>/B站状态</code> 查看状态，<code>/B站退出</code> 清除本地凭据并解绑提醒。Cookie 不需要手动填写。</p></section>
+        <div id="sources-notice" class="alert" role="status"></div>
+        <form id="sources-form" class="settings-form">
+          <section class="source-config"><div class="source-config-head"><span class="source-symbol">⌕</span><div><h2>关键词搜索</h2><p>按最新发布搜索，保留你熟悉的发现方式。</p></div><label class="switch"><input id="source-keyword-enabled" type="checkbox" aria-label="启用关键词搜索"><span></span></label></div><label for="source-keywords">搜索关键词 <small>最多 5 个，用逗号或换行分隔</small></label><textarea id="source-keywords" rows="2" maxlength="500" placeholder="LangGraph, Cursor"></textarea><p class="field-note">至少启用一个来源。关闭搜索后可以只接收作者投稿或关注动态。</p></section>
+          <section class="source-config"><div class="source-config-head"><span class="source-symbol">◉</span><div><h2>指定 UP 主</h2><p>每位作者独立选择投稿、动态或两者。</p></div></div><div id="up-rows"></div><button type="button" id="add-up" class="button secondary">＋ 添加 UP 主</button><p class="field-note">最多 10 位。视频投稿仅指作者自己发布的视频；视频动态也可能是转发。未知类型仅在“全部动态”中保留。</p></section>
+          <section class="source-config"><div class="source-config-head"><span class="source-symbol">≋</span><div><h2>我的关注</h2><p>把已登录账号的关注更新纳入简报。</p></div><label class="switch"><input id="source-following-enabled" type="checkbox" aria-label="启用我的关注"><span></span></label></div><label for="source-following-uid">登录账号 UID</label><input id="source-following-uid" inputmode="numeric" maxlength="30" placeholder="扫码登录后自动填写" readonly><div class="field-grid"><div><label for="following-mode">订阅范围</label><select id="following-mode"><option value="videos">关注视频更新</option><option value="dynamics">关注综合动态</option></select></div><div><label for="following-type">动态内容类型</label><select id="following-type"><option value="all">全部动态</option><option value="video">仅视频</option><option value="non_video">非视频动态</option></select></div></div><div class="login-state" id="following-status"></div><p class="field-note">直接读取扫码账号的关注动态；动态采集有分页和时间预算，不保证覆盖全部历史。图片仅展示，不进行图片内容识别。</p></section>
+          <div class="save-row"><p id="sources-message" role="status"></p><div class="head-actions"><button type="button" id="reset-sources" class="button secondary">恢复已生效设置</button><button type="submit" id="save-sources" class="button primary">保存来源草稿</button></div></div>
+        </form>
+        <p class="field-note">来源决定“从哪里找”，兴趣决定“怎么筛”。封面只用于阅读展示，不参与质量或可信度评分。</p>
+      </section>
+      <section id="view-filters" class="view" hidden>
+        <div class="page-head"><div><div class="eyebrow">LESS NOISE, MORE SIGNAL</div><h1>留下信息，过滤噪声。</h1><p class="subtitle">过滤可撤销，来源持续积累，简报在你需要时生成。</p></div></div>
+        <div id="filters-notice" class="alert"></div>
+        <form id="filters-form" class="settings-form">
+          <section class="source-config"><h2>内容过滤</h2><p class="field-note">规则独立开关。命中内容留在池中，关闭规则后，有效期内的内容可重新参与筛选。</p><div id="rule-list"></div><p id="filter-counts" class="field-note"></p></section>
+          <section class="source-config"><h2>UP 屏蔽名单</h2><p class="field-note">由你明确管理，不会因“没用”反馈自动屏蔽。只按 接口可确认的作者 UID 生效；缺失 UID 不用昵称或采集账号代替，转发原作者可能未知。</p><div id="block-rows"></div><button type="button" id="add-block" class="button secondary">＋ 添加屏蔽 UP</button></section>
+          <section class="source-config"><div class="toggle-row"><div><h2>定时采集</h2><p>仅采集入池，不自动调用模型。</p></div><label class="switch"><input id="schedule-enabled" type="checkbox" aria-label="开启定时采集"><span></span></label></div><div class="field-grid"><div><label for="interval-minutes">采集间隔</label><select id="interval-minutes"><option value="30">每 30 分钟</option><option value="60">每 1 小时</option><option value="120">每 2 小时</option><option value="360">每 6 小时</option></select></div><div><label for="dynamic-ttl">动态候选有效期</label><select id="dynamic-ttl"><option value="24">24 小时</option><option value="72">72 小时（推荐）</option><option value="168">7 天</option></select></div></div><p class="field-note">有效期按发布时间计算，过期退出筛选但保留历史。AstrBot 停止时不采集。动态来源每次最多补采 3 批，受全局预算限制。</p></section>
+          <div class="save-row"><p id="filters-message" role="status"></p><div class="head-actions"><button type="button" id="reset-filters" class="button secondary">恢复已生效设置</button><button id="save-filters" class="button primary">保存设置草稿</button></div></div>
+        </form>
+      </section>
+      <section id="view-history" class="view" hidden><div class="page-head"><div><div class="eyebrow">YOUR READING ARCHIVE</div><h1>每一次发现，都有迹可循。</h1><p class="subtitle">正式简报、采集预览与失败记录，保存在你的电脑里。</p></div><button id="refresh-history" class="button secondary">刷新记录</button></div><div id="history-body"></div></section>
+      <section id="view-preferences" class="view" hidden><div class="page-head"><div><div class="eyebrow">LEARNING AT YOUR PACE</div><h1>偏好慢慢学，兴趣由你定。</h1><p class="subtitle">系统自动汇总反馈；一次“不想看”，不会定义你的长期兴趣。</p></div></div><div id="preferences-body"></div></section>
+      <section id="view-settings" class="view" hidden><div class="page-head"><div><div class="eyebrow">MAKE IT YOURS</div><h1>告诉拾讯，你关心什么。</h1><p class="subtitle">兴趣描述帮助筛选相关内容，采集范围在“订阅来源”中管理。</p></div></div>
+        <form id="settings-form" class="settings-form">
+          <section class="form-section"><div class="form-title"><span>01</span><div><h2>我的兴趣</h2><p>描述你想了解的主题、深度和内容形式。</p></div></div>
+            <div id="legacy-keywords"><label for="keywords">搜索关键词 <small>旧后端兼容设置，保存后实际生效</small></label><input id="keywords" maxlength="500" placeholder="LangGraph, Cursor"></div>
+            <label for="interests">兴趣描述</label><textarea id="interests" rows="5" maxlength="10000" placeholder="你正在学习什么？希望找到什么类型的内容？"></textarea>
+            <label for="interest-mode">兴趣修改方式</label><select id="interest-mode"><option value="same_goal">调整同一目标，延续学习</option><option value="switch_goal">切换目标，隔离旧学习</option></select>
+            <p class="field-note" id="learning-context-note">当前后端仍按关键词等条件隔离偏好，旧记录不会删除。稳定兴趣档案正在等待接入。</p>
+          </section>
+          <section class="form-section"><div class="form-title"><span>02</span><div><h2>简报偏好</h2><p>设置阅读量，为探索留出空间。</p></div></div><div class="field-grid">
+            <div><label for="max-picks">每份最多推荐</label><div class="unit-input"><input id="max-picks" type="number" min="1" max="10" required><span>条</span></div></div>
+            <div><label for="max-duration">单条时长上限</label><div class="unit-input"><input id="max-duration" type="number" min="0.016667" step="any" placeholder="不限"><span>分钟</span></div></div>
+            <div><label for="exploration">目标探索比例</label><div class="unit-input"><input id="exploration" type="number" min="0" max="100" step="any" required><span>%</span></div></div>
+            <div><label for="cooldown">重复推荐间隔</label><div class="unit-input"><input id="cooldown" type="number" min="0" step="any" required><span>天</span></div></div>
+          </div><p class="field-note">少于 5 条时不强制探索；候选不足时不凑数。设置时长上限后，未知时长的内容会被过滤。</p></section>
+          <section class="form-section"><div class="toggle-row"><div><h2>自动偏好学习</h2><p>本地计算，逐步调整常规推荐；不增加模型调用。</p></div><label class="switch"><input id="learning" type="checkbox" aria-label="开启自动偏好学习"><span></span></label></div></section>
+          <div class="save-row"><p id="settings-message" role="status"></p><button id="save-settings" class="button primary" type="submit">保存设置</button></div>
+        </form>
+      </section>
+      <footer>拾讯 · 让信息为你所用<span>本地存储 · 保留你的选择</span></footer>
+    </div>
+  </main>
+</div>
+<div id="toast" role="status" hidden></div>
+</body></html>

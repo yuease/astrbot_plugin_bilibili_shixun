@@ -1,0 +1,8 @@
+{
+  "views": {
+    "bilibili-shixun": {
+      "title": "B站拾讯",
+      "description": "来源、采集、简报、历史与反馈；仅限 Dashboard 管理员。"
+    }
+  }
+}

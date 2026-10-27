@@ -1,0 +1,8 @@
+# Shared host libraries only; no LangChain, LangGraph or independent worker.
+httpx>=0.28,<1
+pydantic>=2.10,<3
+jsonschema>=4.20,<5
+tzdata>=2025.2; platform_system == "Windows"
+bilibili-api-python==17.4.2
+qrcode[pil]>=8.2,<9
+Pillow>=10,<14

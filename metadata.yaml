@@ -1,0 +1,8 @@
+name: astrbot_plugin_bilibili_shixun
+display_name: B站拾讯
+desc: 直连 B 站，支持免登录关键词搜索、聊天订阅管理、QQ 扫码、来源采集与个人简报。
+short_desc: 免登录搜 B 站，聊天管理订阅并生成个人简报。
+version: v0.7.0
+author: yuease
+repo: "https://github.com/yuease/astrbot_plugin_bilibili_shixun"
+astrbot_version: "==4.29.1"

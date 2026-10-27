@@ -1,0 +1,17 @@
+.dev/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+*.sqlite3*
+*.db*
+runtime/
+dist/
+.env
+.env.*
+deployment/
+docs/investigation-*.md
+runtime-direct-v1/
+account/
+session.json

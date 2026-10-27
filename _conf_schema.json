@@ -1,0 +1,32 @@
+{
+  "briefing_provider_id": {
+    "description": "简报使用的 AstrBot 模型 ID",
+    "type": "string",
+    "default": "",
+    "hint": "留空使用 AstrBot 默认聊天模型。只在主动生成简报时调用，聊天检索不会额外调用模型。无需填写密钥或模型端点。"
+  },
+  "model_timeout_seconds": {
+    "description": "简报模型等待上限（秒）",
+    "type": "int",
+    "default": 90,
+    "hint": "10–300 秒；超时后不会自动重试。供应商是否已经计费不能由等待超时判断。"
+  },
+  "dashboard_admins": {
+    "description": "允许使用管理页面的 Dashboard 用户名",
+    "type": "list",
+    "default": [],
+    "hint": "留空使用 AstrBot dashboard.username；聊天权限由当前会话配置中的 admins_id 决定。"
+  },
+  "bili_auto_relogin": {
+    "description": "B 站登录失效时私聊发送二维码",
+    "type": "bool",
+    "default": true,
+    "hint": "只发送到完成扫码绑定的管理员私聊；每次登录失效仅自动发送一轮。主动推送目前支持 OneBot/aiocqhttp。"
+  },
+  "bili_check_interval_minutes": {
+    "description": "B 站登录检查间隔（分钟）",
+    "type": "int",
+    "default": 30,
+    "hint": "5–1440 分钟。采集遇到明确的未登录响应也会标记失效；网络或风控错误不触发重新扫码。"
+  }
+}
