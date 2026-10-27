@@ -1,4 +1,16 @@
 {
+  "collection_context_enabled": {
+    "description": "采集摘要自动带入聊天",
+    "type": "bool",
+    "default": true,
+    "hint": "在本人私聊中自动带入最新一轮订阅采集摘要，详情仍按需查询。"
+  },
+  "collection_context_max_chars": {
+    "description": "采集摘要长度上限",
+    "type": "int",
+    "default": 6000,
+    "hint": "1000–20000 字符，默认6000；最多展示8条，按发布时间由新到旧。"
+  },
   "briefing_provider_id": {
     "description": "简报模型 ID",
     "type": "string",

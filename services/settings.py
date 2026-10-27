@@ -21,6 +21,8 @@ class Settings:
     dashboard_bindings: str = ""
 
     account_hosting_admin_only: bool = True
+    collection_context_enabled: bool = True
+    collection_context_max_chars: int = 6000
 
     @classmethod
     def from_config(cls, config):
@@ -33,8 +35,13 @@ class Settings:
         max_users = config.get("max_users", 32)
         bindings = config.get("dashboard_bindings", "")
         hosting_admin_only = config.get("account_hosting_admin_only", True)
+        context_enabled = config.get("collection_context_enabled", True)
+        context_chars = config.get("collection_context_max_chars", 6000)
         if (
-            type(hosting_admin_only) is not bool
+            type(context_enabled) is not bool
+            or type(context_chars) is not int
+            or not 1000 <= context_chars <= 20000
+            or type(hosting_admin_only) is not bool
             or not isinstance(provider, str)
             or len(provider) > 200
             or type(timeout) is not int
@@ -65,4 +72,6 @@ class Settings:
             max_users,
             bindings.strip(),
             hosting_admin_only,
+            context_enabled,
+            context_chars,
         )

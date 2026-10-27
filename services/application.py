@@ -11,6 +11,7 @@ from ..core.errors import RunFailure, classify, public_diagnostic
 from ..core.source_types import SourceError
 from .bilibili_login import BilibiliLogin
 from .bilibili_source import BilibiliSource
+from .collection_context import collection_context
 from .errors import PluginError, log_failure
 from .images import ImageDelivery
 from .jobs import JobStore
@@ -119,6 +120,20 @@ class Application:
         if operation == "get_settings":
             return await self.own(self._settings_read())
         return await self.own(self.io(self.runtime.tool, operation, params))
+
+    async def collection_context(self):
+        await self.start()
+        return await self.own(self._collection_context())
+
+    async def _collection_context(self):
+        async with self.lock:
+            # Collection writes batches incrementally; expose only a settled run.
+            if self.active is not None:
+                return ""
+            job = await self.io(self.jobs.latest, "collect", self.runtime.account_scope)
+            if job is None or job["status"] != "completed":
+                return ""
+            return await self.io(collection_context, self.runtime, job)
 
     async def _settings_read(self):
         async with self.lock:

@@ -13,6 +13,7 @@ from typing import Any
 import jsonschema
 from astrbot.api import AstrBotConfig
 from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.api.provider import ProviderRequest
 from astrbot.api.star import Context, Star
 from astrbot.api.web import error_response, json_response, request, stream_response
 from astrbot.core.agent.run_context import ContextWrapper
@@ -186,6 +187,31 @@ class BilibiliShixunPlugin(Star):
             log_failure(self.logger, "chat", key, exc)
             result = dict(PluginError("INTERNAL_ERROR").as_dict(), request_id=key)
         return json.dumps(public_guidance(result), ensure_ascii=False, separators=(",", ":"))
+
+    @filter.on_llm_request()
+    async def inject_collection_context(self, event: AstrMessageEvent, req: ProviderRequest):
+        previous = getattr(req, "_bilibili_collection_context", "")
+        if previous:
+            req.system_prompt = (req.system_prompt or "").replace(previous, "", 1)
+            req._bilibili_collection_context = ""
+        if self._terminated or not self.settings.collection_context_enabled:
+            return
+        try:
+            authorize_chat(event, self.context, self.settings)
+            # Ordinary chats should not create new personal runtimes or consume user slots.
+            from .services.users import user_key
+
+            application = self.users.apps.get(user_key(chat_identity(event)))
+            if application is None:
+                return
+            block = await application.collection_context()
+            if block:
+                req.system_prompt = (req.system_prompt or "") + block
+                req._bilibili_collection_context = block
+        except PluginError:
+            return
+        except Exception as exc:
+            log_failure(self.logger, "collection_context", "chat", exc)
 
     async def _account_command(self, event, operation):
         event.should_call_llm(False)

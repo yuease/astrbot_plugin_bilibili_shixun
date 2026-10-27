@@ -120,16 +120,28 @@ def canonical_read(db, article):
     return article
 
 
-def retrieve(store, profile, request, absolute, groups, check_deadline=lambda: None):
+def retrieve(
+    store, profile, request, absolute, groups, check_deadline=lambda: None, *, collection_at=None
+):
     # No personal TTL, cooldown, max_candidates, exploration or learning ranking is consulted here.
     store.db.execute("BEGIN")
     try:
         rows = store.db.execute(
-            "SELECT * FROM pool_items WHERE namespace=? ORDER BY rowid", (namespace(profile),)
+            "SELECT * FROM pool_items WHERE namespace=?"
+            + (" AND last_seen=?" if collection_at is not None else "")
+            + " ORDER BY rowid",
+            (namespace(profile), collection_at)
+            if collection_at is not None
+            else (namespace(profile),),
         ).fetchall()
-        temp = store.db.execute(
-            "SELECT * FROM temporary_items WHERE namespace=? ORDER BY rowid", (namespace(profile),)
-        ).fetchall()
+        temp = (
+            []
+            if collection_at is not None
+            else store.db.execute(
+                "SELECT * FROM temporary_items WHERE namespace=? ORDER BY rowid",
+                (namespace(profile),),
+            ).fetchall()
+        )
         aliases = {r["alias"]: r["video"] for r in store.db.execute("SELECT * FROM aliases")}
         store.db.commit()
     except Exception:
