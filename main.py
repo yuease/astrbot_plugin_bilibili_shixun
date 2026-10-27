@@ -109,7 +109,7 @@ class BilibiliShixunPlugin(Star):
             log_failure(self.logger, "initialize", "startup", exc)
             raise
         self.logger.info(
-            "B站拾讯 v0.9.0 initialized; registered %s tools: %s",
+            "B站拾讯 v0.9.1 initialized; registered %s tools: %s",
             len(self.tools),
             ", ".join(tool.name for tool in self.tools),
         )

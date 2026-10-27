@@ -350,3 +350,47 @@ async def test_sdk_response_cookies_do_not_cross_users_or_anonymous_queries(plug
             slot.reset(token)
     assert "SESSDATA" not in requests[1] and "SESSDATA" not in requests[2]
     assert a.source.transport.session.cookies.get("SESSDATA") == "synthetic-a"
+
+
+@pytest.mark.asyncio
+async def test_personal_model_provider_routing_and_shared_generation_gate(plugin, monkeypatch):
+    from astrbot_plugin_bilibili_shixun.core.schemas import Selection
+
+    a, b = await plugin.users.chat(event()), await plugin.users.chat(event("20002"))
+    active = 0
+    peak = 0
+
+    async def provider(umo):
+        return SimpleNamespace(meta=lambda: SimpleNamespace(id=umo))
+
+    async def generate(**kwargs):
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        await asyncio.sleep(0)
+        active -= 1
+        return SimpleNamespace(completion_text='{"picks":[]}', usage=None)
+
+    monkeypatch.setattr(plugin.context, "get_using_provider_async", AsyncMock(side_effect=provider))
+    plugin.context.llm_generate = AsyncMock(side_effect=generate)
+    await asyncio.gather(a.model._select("a", Selection), b.model._select("b", Selection))
+    assert peak == 1
+    assert {
+        call.kwargs["chat_provider_id"] for call in plugin.context.llm_generate.call_args_list
+    } == {event().unified_msg_origin, event("20002").unified_msg_origin}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("response", ["not json", '{"picks":{},"unexpected":1}'])
+async def test_briefing_model_parse_failure_does_not_repeat_paid_call(plugin, response):
+    from astrbot_plugin_bilibili_shixun.core.errors import DiagnosedError
+    from astrbot_plugin_bilibili_shixun.core.schemas import Selection
+
+    app = await plugin.users.chat(event())
+    app.model.settings = replace(plugin.settings, briefing_provider_id="offline")
+    plugin.context.llm_generate = AsyncMock(
+        return_value=SimpleNamespace(completion_text=response, usage=None)
+    )
+    with pytest.raises(DiagnosedError):
+        await app.model._select("prompt", Selection)
+    assert plugin.context.llm_generate.await_count == 1

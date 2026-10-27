@@ -1,0 +1,8 @@
+# Reproduced on Windows / Python 3.12; browser installation is separate.
+-r requirements.txt
+astrbot==4.29.1
+pytest==9.1.1
+pytest-asyncio==1.4.1
+ruff==0.17.2
+playwright==1.64.1
+uvicorn==0.54.0

@@ -50,7 +50,7 @@ function renderAccount(){
  const account=state?.bilibili_account,el=$('#bilibili-account-status');
  if(!el)return;
  const labels={valid:'已登录',expired:'登录已失效',not_logged_in:'尚未登录'};
- el.textContent=account?.qr_pending?'等待 QQ 中的二维码扫码确认。':(labels[account?.status]||'状态待确认')+(account?.uid?' · UID '+account.uid:'')+(account?.auto_relogin?' · 登录失效时自动提醒':' · 自动提醒关闭');
+ el.textContent=account?.qr_pending?'等待 QQ 中的二维码扫码确认。':(labels[account?.status]||'状态待确认')+(account?.uid?' · UID '+account.uid:'')+(!account?.notification_bound?'':account?.notification_mode==='on_use'?' · 登录失效时在下次使用插件时提示':account?.auto_relogin?' · OneBot登录失效时自动提醒':' · 自动提醒关闭');
  if(account?.notification_bound&&!account?.proactive_supported)el.textContent+='。QQ官方机器人在下次使用插件时提示登录失效，不主动推送二维码；请在私聊发送 /B站登录。';
 }
 function followingStatus(){

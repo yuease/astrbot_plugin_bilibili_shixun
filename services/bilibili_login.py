@@ -218,6 +218,8 @@ class BilibiliLogin:
                     self.pending["png"],
                     event,
                 )
+                if owner["adapter"] in QQ_OFFICIAL:
+                    return "当前二维码已重新提交给官方适配器，等待扫码；未生成新二维码。"
                 return "二维码已发送，等待 B 站 App 确认。"
             async with httpx.AsyncClient(
                 headers=HEADERS, timeout=15, follow_redirects=False, trust_env=False
@@ -268,6 +270,10 @@ class BilibiliLogin:
                 self.state["notified_revision"] = self.revision
                 await self.persist()
             self.poll_task = asyncio.create_task(self._poll(pending))
+            if owner["adapter"] in QQ_OFFICIAL:
+                return (
+                    "二维码已提交给官方适配器，请查看图片并扫码；可用 /B站状态 查看实际登录结果。"
+                )
             return "二维码已发送，确认后会在本私聊通知登录结果。"
 
     async def _poll(self, pending):

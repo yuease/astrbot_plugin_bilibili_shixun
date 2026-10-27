@@ -2,7 +2,7 @@
 
 在 AstrBot 中直连 B 站，通过用户私聊临时搜索、管理长期订阅、查询原文或按需生成简报。公开关键词视频搜索无需扫码；UP 主与自己的关注来源使用扫码账号。**不依赖 RSSHub，不需要额外服务或独立 Python 环境。**
 
-当前为 v0.9.0，支持独立用户档案。普通用户默认可私聊使用，管理员可关闭；群聊禁用。提供源码安装包，尚未提交插件市场。当前仅验证 AstrBot 4.29.1，暂保留精确版本约束；已编写 OneBot/aiocqhttp、QQ官方WebSocket和Webhook的C2C单聊适配；v0.9.0按用户要求暂不测试，不能将旧版测试结果视作新版已验证。
+当前为 v0.9.1，支持独立用户档案。普通用户默认可私聊使用，管理员可关闭；群聊禁用。提供源码安装包，尚未提交插件市场。当前仅验证 AstrBot 4.29.1，暂保留精确版本约束；已编写 OneBot/aiocqhttp、QQ官方WebSocket和Webhook的C2C单聊适配；v0.9.1已完成离线适配器与浏览器回归，真实腾讯平台权限及送达仍待线上验证。
 
 ## 登录
 
@@ -142,3 +142,11 @@ v0.8.0曾通过 99 项 Python 回归检查、5 项页面设置同步逻辑检查
 官方模式不尝试后台主动推送二维码，配置bili_auto_relogin仅控制OneBot。已保存登录成功后，即使结果通知发送失败，也保留实际登录并可通过 /B站状态 查看。原文链接仍在工具结果中保留；官方图片说明不拼接URL，以减少未配置域名导致的拒发。Bot最终回复若要包含B站链接，需在QQ开放平台配置允许的消息URL。图片大小、审核和消息频控仍由平台决定。
 
 本轮仅静态检查和源码打包，未运行测试、扫码、调用真实模型或向QQ发送消息。详见 [适配说明](docs/update-v0.9.0.md)。
+
+## v0.9.1 测试与修复
+
+新增QQ官方真实事件/消息编解码离线测试，并用本机Edge无头浏览器连接临时FastAPI服务，执行生产页面和插件真实处理函数；仅腾讯/B站传输、宿主登录认证和前端桥接为模拟。测试不需要AppID、AppSecret、Cookie或真实模型。官方图片返回submitted表示已交给宿主适配器，delivery_confirmation=unavailable，不保证真实送达，不自动重发；二维码提交提示使用同一口径。
+
+开发测试环境可用Python 3.12安装requirements-dev.txt，另安装Playwright Chromium或设置SHIXUN_BROWSER_CHANNEL=msedge使用已安装Edge。执行 python -m pytest -q tests 和 node --test tests/test_gui_sync.cjs。生产插件仍只依赖requirements.txt。
+
+详细结果、覆盖及剩余限制见 [v0.9.1验收报告](docs/verification-v0.9.1.md)。未配置真实官方机器人时，不能离线证明账号权限、腾讯审核/配额或手机QQ实际收到图片。

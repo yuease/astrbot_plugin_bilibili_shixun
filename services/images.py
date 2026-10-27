@@ -174,4 +174,13 @@ class ImageDelivery:
         result["status"] = (
             "sent" if not result["errors"] else "partial" if result["sent"] else "failed"
         )
+        if event.get_platform_name() in QQ_OFFICIAL:
+            # AstrBot's public event.send returns no QQ receipt, including when
+            # its internal codec does not expose the remote message ID.
+            result["delivery_confirmation"] = "unavailable"
+            if result["status"] == "sent":
+                result["status"] = "submitted"
+            result["guidance"] = (
+                "submitted仅表示已提交给AstrBot适配器，不等于确认用户收到；不要自动重发。原文链接保留在条目详情。"
+            )
         return copy.deepcopy(result)
