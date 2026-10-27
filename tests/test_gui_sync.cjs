@@ -57,7 +57,7 @@ test('polling cannot reload the form while its own save is in progress', () => {
   assert.equal(p.fills.length, 0);
 });
 
-test('draft keys differ between authenticated dashboard profiles', () => {
+test('draft keys differ between bound administrator profiles', () => {
   const p = page();
   const app = fs.readFileSync(path.join(__dirname, '../views/bilibili-shixun/app.js'), 'utf8');
   for (const name of ['draftKey', 'localKey']) {

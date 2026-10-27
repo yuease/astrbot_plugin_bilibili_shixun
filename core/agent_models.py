@@ -101,6 +101,24 @@ class UpdatePreferencesRequest(Scoped):
         return self
 
 
+class SubscriptionSwitchRequest(Scoped):
+    expected_version: str = Field(min_length=1, max_length=100)
+    request_id: str = Field(min_length=1, max_length=100, pattern=r"^[A-Za-z0-9_.:-]+$")
+    source: Literal["keyword_search", "up", "following"]
+    enabled: bool = Field(strict=True)
+    up_uid: str | None = Field(None, pattern=r"^[0-9]{1,30}$")
+    following_scope: Literal["videos", "dynamics"] | None = None
+    account_uid: str = ""  # Injected by the trusted host, never exposed as a tool argument.
+
+    @model_validator(mode="after")
+    def target(self):
+        if (self.source == "up") != (self.up_uid is not None):
+            raise ValueError("up_uid is required only for UP subscriptions")
+        if self.following_scope is not None and self.source != "following":
+            raise ValueError("following_scope is only valid for following subscriptions")
+        return self
+
+
 class UndoPreferenceChangeRequest(Scoped):
     change_id: str = Field(min_length=1, max_length=100)
     expected_version: str | None = None

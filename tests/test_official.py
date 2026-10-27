@@ -432,6 +432,7 @@ async def test_account_command_runs_without_model_and_uses_plain_result(plugin, 
     replies = [value async for value in plugin._account_command(event, "status")]
     assert len(replies) == 1 and replies[0].use_markdown_ is False
     assert "尚未登录" in replies[0].get_plain_text()
+    assert event.unified_msg_origin in replies[0].get_plain_text()
     assert plugin.context.llm_generate.await_count == 0
 
 

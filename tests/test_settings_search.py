@@ -816,7 +816,7 @@ def test_public_tools_have_distinct_names_and_guidance_preserves_content():
         tool_specs,
     )
 
-    assert len(set(TOOL_NAMES.values())) == len(tool_specs()) == 9
+    assert len(set(TOOL_NAMES.values())) == len(tool_specs()) == 10
     for operation, _, description in tool_specs():
         assert re.fullmatch(r"[a-z_]{1,64}", TOOL_NAMES[operation])
         exposed = public_description(description)

@@ -10,6 +10,7 @@ TOOL_NAMES = {
     "get_item": "bilibili_read_content_detail",
     "get_settings": "bilibili_get_subscriptions_and_preferences",
     "update_settings": "bilibili_update_subscriptions_and_preferences",
+    "set_subscription_enabled": "bilibili_set_subscription_enabled",
     "undo_settings": "bilibili_undo_settings_change",
     "get_source_status": "bilibili_get_source_status",
     "refresh_sources": "bilibili_refresh_subscriptions",
@@ -149,7 +150,7 @@ def tool_specs():
         (
             "get_settings",
             {"type": "object", "additionalProperties": False, "properties": {}},
-            "查看与GUI共用的长期关键词、兴趣、订阅、过滤、采集和学习设置、当前version及最近change_id。修改或撤销前先读取。保存、采集中和已有结果是独立状态。"
+            "查看与GUI共用的长期关键词、兴趣、订阅、过滤、采集和学习设置、当前version及最近change_id。修改或撤销前先读取。保存、采集中和已有结果是独立状态。返回user_identity.sid可用于管理员页面绑定；B站登录在私聊发送/B站登录或/B站登陆，不在页面扫码。"
             + RULES,
         ),
         (
@@ -178,6 +179,31 @@ def tool_specs():
                 },
             },
             "仅按用户要求增量增删长期关键词、修改长期兴趣；保留其他订阅和学习目标，不自动采集。长期关键词总数最多5个。必须使用刚读取的version；冲突先重读，不能盲目重试覆盖GUI修改；多个字段可一次原子修改，依次修改时每次先读取新version。"
+            + RULES,
+        ),
+        (
+            "set_subscription_enabled",
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["expected_version", "source", "enabled"],
+                "properties": {
+                    "expected_version": {"type": "string", "minLength": 1, "maxLength": 100},
+                    "source": {"type": "string", "enum": ["keyword_search", "up", "following"]},
+                    "enabled": {"type": "boolean"},
+                    "up_uid": {
+                        "type": "string",
+                        "pattern": "^[0-9]{1,30}$",
+                        "description": "source=up时必填，须为当前已配置UP的B站UID；不按名字猜测，不新增订阅。",
+                    },
+                    "following_scope": {
+                        "type": "string",
+                        "enum": ["videos", "dynamics"],
+                        "description": "仅source=following可用；videos为关注视频，dynamics为综合动态；省略保留当前模式。",
+                    },
+                },
+            },
+            "按用户明确要求开启或暂停本人订阅来源，先get_settings读取最新version。source=keyword_search控制长期关键词来源，须已有关键词；source=up控制up_uid对应的已有UP订阅（保留投稿/动态范围）；source=following控制本人关注来源，可选视频或综合动态，UID由服务端从本人扫码账号取得。开启UP或关注须有账号托管权限并已登录，失败应提示/B站登录（/B站登陆也可），页面没有扫码登录入口。关闭来源不要求登录，不删除订阅、历史或学习。保存不自动采集；用户要求更新时再refresh_sources。不得替他人修改或自动开启来源。"
             + RULES,
         ),
         (

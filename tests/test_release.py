@@ -63,7 +63,7 @@ socket.socket.connect_ex = denied
 sys.path.insert(0, sys.argv[1])
 from astrbot_plugin_bilibili_shixun import main
 from astrbot_plugin_bilibili_shixun.services.contracts import TOOL_NAMES
-assert len(TOOL_NAMES) == 9
+assert len(TOOL_NAMES) == 10
 assert main.BilibiliShixunPlugin.name == 'astrbot_plugin_bilibili_shixun'
 print('isolated-release-import-ok')
 """

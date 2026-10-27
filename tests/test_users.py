@@ -188,22 +188,23 @@ async def test_admin_and_group_cannot_select_another_user_via_tool_arguments(plu
 
 
 @pytest.mark.asyncio
-async def test_dashboard_identity_is_separate_and_binding_is_explicit(plugin, monkeypatch):
-    a = await plugin.users.chat(event())
-    gui = await plugin.users.dashboard("admin")
-    editor = await plugin.users.dashboard("editor")
-    assert len({a.root, gui.root, editor.root}) == 3
+async def test_dashboard_fixed_admin_binding_and_web_authorization(plugin, monkeypatch):
+    a = await plugin.users.chat(event("10001"))
+    ordinary = await plugin.users.chat(event())
+    with pytest.raises(PluginError) as missing:
+        await plugin.users.dashboard("admin")
+    assert missing.value.code == "DASHBOARD_BINDING_REQUIRED"
+    plugin.users.settings = replace(plugin.settings, dashboard_bindings="10001")
+    assert await plugin.users.dashboard("admin") is a
+    assert await plugin.users.dashboard("editor") is a
+    assert ordinary is not a
     monkeypatch.setattr(
         main, "request", SimpleNamespace(username="admin", plugin_name=main.PLUGIN_NAME, query={})
     )
     monkeypatch.setattr(main, "json_response", lambda value, **kwargs: value)
     monkeypatch.setattr(main, "error_response", lambda message, **kwargs: kwargs)
     state = await plugin._web("state")
-    assert state["user_scope"]["isolated"]
-    bound = replace(plugin.settings, dashboard_bindings=("admin|aiocqhttp|bot-1|20001",))
-    plugin.users.settings = bound
-    assert await plugin.users.dashboard("admin") is a
-    assert await plugin.users.dashboard("editor") is editor
+    assert state["user_scope"]["key"] == a.root.name
     main.request.query = {"user_id": "20001"}
     assert (await plugin._web("state"))["status_code"] == 400
     main.request.query = {}

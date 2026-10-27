@@ -18,7 +18,7 @@ class Settings:
     bili_check_interval_minutes: int = 30
     allow_private_users: bool = True
     max_users: int = 32
-    dashboard_bindings: tuple[str, ...] = ()
+    dashboard_bindings: str = ""
 
     account_hosting_admin_only: bool = True
     account_hosting_users: tuple[str, ...] = ()
@@ -32,7 +32,7 @@ class Settings:
         interval = config.get("bili_check_interval_minutes", 30)
         private_users = config.get("allow_private_users", True)
         max_users = config.get("max_users", 32)
-        bindings = config.get("dashboard_bindings", [])
+        bindings = config.get("dashboard_bindings", "")
         hosting_admin_only = config.get("account_hosting_admin_only", True)
         hosting_users = config.get("account_hosting_users", [])
         if (
@@ -59,15 +59,10 @@ class Settings:
             or type(private_users) is not bool
             or type(max_users) is not int
             or not 1 <= max_users <= 128
-            or not isinstance(bindings, list)
-            or any(
-                not isinstance(item, str)
-                or len(item) > 1024
-                or len(item.split("|")) != 4
-                or any(not part.strip() for part in item.split("|"))
-                for item in bindings
-            )
-            or len({item.split("|")[0].strip() for item in bindings}) != len(bindings)
+            or not isinstance(bindings, str)
+            or len(bindings) > 1024
+            or "|" in bindings
+            or any(c.isspace() for c in bindings.strip())
         ):
             raise PluginError("INVALID_ARGUMENT")
         return cls(
@@ -78,7 +73,7 @@ class Settings:
             interval,
             private_users,
             max_users,
-            tuple(bindings),
+            bindings.strip(),
             hosting_admin_only,
             tuple("|".join(part.strip() for part in item.split("|")) for item in hosting_users),
         )

@@ -168,6 +168,17 @@ class Application:
                 raise PluginError("PLUGIN_CLOSED")
             if self.active is not None or self.login.authenticating:
                 raise PluginError("TASK_BUSY", status=409)
+            if operation == "set_subscription_enabled":
+                if params["enabled"] and params["source"] != "keyword_search":
+                    self.login.require_hosting()
+                    if not self.login.uid:
+                        raise PluginError("BILI_LOGIN_REQUIRED")
+                return await self.io(
+                    self.runtime.set_subscription_enabled,
+                    params,
+                    request_id,
+                    self.login.uid if params["source"] == "following" and params["enabled"] else "",
+                )
             function = (
                 self.runtime.update_settings
                 if operation == "update_settings"

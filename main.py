@@ -109,7 +109,7 @@ class BilibiliShixunPlugin(Star):
             log_failure(self.logger, "initialize", "startup", exc)
             raise
         self.logger.info(
-            "B站拾讯 v0.10.0 initialized; registered %s tools: %s",
+            "B站拾讯 v0.11.0 initialized; registered %s tools: %s",
             len(self.tools),
             ", ".join(tool.name for tool in self.tools),
         )
@@ -144,7 +144,7 @@ class BilibiliShixunPlugin(Star):
                 result = await application.send_item_images(
                     event, params, chat_request_id(event, operation)
                 )
-            elif operation in ("update_settings", "undo_settings"):
+            elif operation in ("update_settings", "undo_settings", "set_subscription_enabled"):
                 semantic = {k: v for k, v in params.items() if k != "expected_version"}
                 request_id = (
                     "settings-"
@@ -164,7 +164,9 @@ class BilibiliShixunPlugin(Star):
             else:
                 result = await application.tool(operation, params)
                 if operation == "get_settings":
-                    result["user_identity"] = chat_identity(event)
+                    result["user_identity"] = dict(
+                        chat_identity(event), sid=event.unified_msg_origin
+                    )
                     if event.get_platform_name() in QQ_OFFICIAL:
                         result["platform_capabilities"] = {
                             "private_scope": "qq_c2c",
@@ -194,6 +196,7 @@ class BilibiliShixunPlugin(Star):
             if isinstance(result, dict):
                 labels = {"valid": "已登录", "expired": "登录已失效", "not_logged_in": "尚未登录"}
                 message = "B 站：" + labels.get(result["status"], "状态待确认")
+                message += "\nSID：" + event.unified_msg_origin
                 if result.get("uid"):
                     message += "\nUID：" + str(result["uid"])
                 if not result["account_hosting"]["allowed"]:
@@ -216,7 +219,7 @@ class BilibiliShixunPlugin(Star):
             yield qq_plain_result(event, "B 站账号操作未完成，请稍后重试。")
         event.stop_event()
 
-    @filter.command("B站登录")
+    @filter.command("B站登录", alias={"B站登陆"})
     async def bili_login(self, event: AstrMessageEvent):
         async for result in self._account_command(event, "login"):
             yield result
@@ -280,7 +283,7 @@ class BilibiliShixunPlugin(Star):
                 result["user_scope"] = {
                     "isolated": True,
                     "key": application.root.name,
-                    "label": "当前 Dashboard 登录账号的独立档案；若已配置私聊绑定则使用该个人档案。",
+                    "label": "页面固定管理配置中绑定的管理员私聊档案；普通用户的私聊数据仍独立。",
                 }
             if operation == "download":
 

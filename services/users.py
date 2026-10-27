@@ -45,12 +45,8 @@ class UserApplications:
                     admins = {str(v) for v in self.context.get_config(umo).get("admins_id", [])}
                     if identity["sender"] not in admins:
                         continue
-                if identity.get("kind") == "dashboard":
-                    allowed = self.settings.dashboard_admins or (
-                        self.context.get_config().get("dashboard", {}).get("username"),
-                    )
-                    if identity.get("username") not in allowed:
-                        continue
+                if identity.get("kind") != "chat":
+                    continue
                 await self.get(identity)
             except Exception as exc:
                 log_failure(self.logger, "restore_user", path.parent.name[:12], exc)
@@ -74,13 +70,27 @@ class UserApplications:
         return await self.get(chat_identity(event))
 
     async def dashboard(self, username):
-        for binding in self.settings.dashboard_bindings:
-            name, adapter, platform, sender = [v.strip() for v in binding.split("|")]
-            if name == username:
-                return await self.get(
-                    {"kind": "chat", "adapter": adapter, "platform_id": platform, "sender": sender}
-                )
-        return await self.get({"kind": "dashboard", "username": username})
+        # Host login authorizes access; it never selects a separate personal profile.
+        target = self.settings.dashboard_bindings
+        if not target:
+            raise PluginError("DASHBOARD_BINDING_REQUIRED", status=409)
+        matches = []
+        for app in tuple(self.apps.values()):
+            identity = app.identity
+            if not identity or identity.get("kind") != "chat":
+                continue
+            if target not in (identity["sender"], self._umo(identity)):
+                continue
+            admins = {
+                str(v) for v in self.context.get_config(self._umo(identity)).get("admins_id", [])
+            }
+            if identity["sender"] in admins:
+                matches.append(app)
+        if not matches:
+            raise PluginError("DASHBOARD_BINDING_NOT_FOUND", status=409)
+        if len(matches) != 1:
+            raise PluginError("DASHBOARD_BINDING_AMBIGUOUS", status=409)
+        return matches[0]
 
     async def get(self, identity):
         key = user_key(identity)

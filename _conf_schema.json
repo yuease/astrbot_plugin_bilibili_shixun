@@ -15,7 +15,7 @@
     "description": "允许使用管理页面的 Dashboard 用户名",
     "type": "list",
     "default": [],
-    "hint": "留空使用 AstrBot dashboard.username；各 Dashboard 登录账号独立隔离。私聊访问由 allow_private_users 决定。"
+    "hint": "留空使用 AstrBot dashboard.username；仅控制哪些Dashboard登录账号可访问页面，所有获准账号都管理固定绑定的管理员档案。"
   },
   "bili_auto_relogin": {
     "description": "OneBot 登录失效时主动发送二维码",
@@ -39,13 +39,13 @@
     "description": "最多启用的个人档案数",
     "type": "int",
     "default": 32,
-    "hint": "1–128，包含 Dashboard 独立档案；达上限拒绝新建，不覆盖或逐出其他用户。调低上限后超额档案暂停恢复，数据保留。"
+    "hint": "1–128，达到上限拒绝新建，不覆盖或逐出其他用户。页面复用绑定的管理员私聊档案，不单独创建档案。"
   },
   "dashboard_bindings": {
-    "description": "Dashboard 到个人私聊的绑定",
-    "type": "list",
-    "default": [],
-    "hint": "每项：Dashboard用户名|平台适配器|机器人实例ID|用户ID，例如 admin|aiocqhttp|mybot|123456。仅可信管理员配置；不绑定时每个 Dashboard 账号使用独立档案，不能自动读取聊天用户的数据。 QQ官方机器人的用户ID为OpenID，不是QQ号，可查看实际设置中的user_identity。"
+    "description": "页面固定绑定的管理员 QQ号或SID",
+    "type": "string",
+    "default": "",
+    "hint": "OneBot通常只填管理员QQ号；官方机器人填 /B站状态 返回的SID（也可查看设置工具的user_identity.sid）。该用户须已设为AstrBot管理员，并先私聊发送 /B站状态 建立档案。所有获准Dashboard账号管理这一个管理员档案，不再按Dashboard用户名分档。号码跨机器人实例有歧义时填完整SID；留空不开放插件页面。修改后重载。"
   },
   "account_hosting_admin_only": {
     "description": "账号托管仅限管理员（允许可信名单例外）",

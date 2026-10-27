@@ -1,6 +1,6 @@
 # B 站直连实现
 
-`main.py` 注册九个聊天工具：设置读取/修改/撤销、匿名临时搜索、统一查询、详情、来源状态、刷新和发图，管理页面 API 和三个 QQ 账号命令。入口先校验私聊权限或 Dashboard 身份，由 UserApplications 按可信宿主身份选择独立 Application；工具参数不能选用户。登录命令不经过模型；初始化后记录版本和工具列表。
+`main.py` 注册十个聊天工具：设置读取/修改/撤销、订阅启停、匿名临时搜索、统一查询、详情、来源状态、刷新和发图，管理页面 API 和三个 QQ 账号命令。入口先校验私聊权限或 Dashboard 身份，由 UserApplications 按可信宿主身份选择独立 Application；工具参数不能选用户。登录命令不经过模型；初始化后记录版本和工具列表。
 
 ## 共享设置
 
@@ -62,4 +62,9 @@ JSON 被规范化为既有 Article 和来源贡献。动态保留返回的分页
 
 共享运行目录已停用，用户根目录按可信身份 JSON 的 SHA-256 命名。每个用户独立 Application、Runtime、数据库、登录、调度器和回执；源请求共享 SourceGate，模型共享单并发锁，避免用户增加后无界并发。SDK 默认客户端按事件循环共享 Cookie，因此使用任务上下文分派器为本插件注入独立 HTTPXClient；没有本插件上下文的其他调用继续使用原 SDK 客户端，卸载只关闭本插件创建的会话。每个用户的公开搜索和登录采集还各用一个客户端，防止匿名查询携带账号 Cookie。精确依赖 SDK 17.4.2，不扩大兼容声明。
 
-Dashboard 身份来自官方 request.username，经原鉴权后选独立档案或可信配置绑定；无 URL/body 参数可选用户。状态响应包含个人 scope key，页面草稿按该 key 分隔，登录范围变化时清屏重载。旧共享目录不导入。
+Dashboard 身份来自官方 request.username，经原鉴权后仅解析 dashboard_bindings 指定的管理员 QQ号或 SID，所有获准页面账号使用同一个已存在的管理员私聊档案；不创建 Dashboard 独立档案，目标缺失、非管理员或歧义均拒绝；无 URL/body 参数可选用户。状态响应包含个人 scope key，页面草稿按该 key 分隔，登录范围变化时清屏重载。旧共享目录不导入。
+
+
+## 订阅启停
+
+`bilibili_set_subscription_enabled` 对应 `SubscriptionSwitchRequest`，使用和兴趣修改相同的版本检查、持久回执、文件提交恢复及撤销机制。source 为 keyword_search/up/following；UP 只接受已有订阅 UID 并保留其 scope/content_type，关注 UID 由服务端从本人已登录账号注入。工具参数不能选用户、路径、凭据或账号 UID。开启私有来源先检查托管权限及登录，停用不要求登录，不删除内容或自动采集。source_plan 与关键词开关分别记录变更，撤销时保留其他字段。

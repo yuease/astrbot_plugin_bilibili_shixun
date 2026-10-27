@@ -494,19 +494,21 @@ async def test_astrbot_plugin_load_state_and_cleanup(tmp_path, monkeypatch):
     context.registered_web_apis = []
     context.llm_generate = AsyncMock(side_effect=AssertionError("No model call allowed"))
     monkeypatch.setattr(main, "get_astrbot_plugin_data_path", lambda: str(tmp_path))
-    plugin = main.BilibiliShixunPlugin(context, {})
+    context.astrbot_config_mgr = SimpleNamespace(get_conf=lambda umo: context._config)
+    plugin = main.BilibiliShixunPlugin(context, {"dashboard_bindings": "10001"})
     info = Mock(wraps=plugin.logger.info)
     monkeypatch.setattr(plugin.logger, "info", info)
     try:
         await plugin.initialize()
         assert any(
-            "registered %s tools" in call.args[0] and call.args[1] == 9
+            "registered %s tools" in call.args[0] and call.args[1] == 10
             for call in info.call_args_list
         )
+        await plugin.users.chat(owner_event())
         application = await plugin.users.dashboard("smoke-admin")
         state = await application.web("state", {})
         assert state["bilibili_account"]["status"] == "not_logged_in"
-        assert len(context.provider_manager.llm_tools.func_list) == 9
+        assert len(context.provider_manager.llm_tools.func_list) == 10
         from astrbot_plugin_bilibili_shixun.services.contracts import TOOL_NAMES
 
         assert {tool.name for tool in plugin.tools} == set(TOOL_NAMES.values())

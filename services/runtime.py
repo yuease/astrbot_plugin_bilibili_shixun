@@ -5,7 +5,11 @@ import threading
 from contextlib import closing
 from pathlib import Path
 
-from ..core.agent_models import UndoPreferenceChangeRequest, UpdatePreferencesRequest
+from ..core.agent_models import (
+    SubscriptionSwitchRequest,
+    UndoPreferenceChangeRequest,
+    UpdatePreferencesRequest,
+)
 from ..core.briefing import local_now, run_briefing
 from ..core.collection import collect
 from ..core.core_errors import CoreError
@@ -142,6 +146,22 @@ class Runtime:
                 value["interest_mode"] = "same_goal"
             change = self.settings_service().update(UpdatePreferencesRequest.model_validate(value))
             return self.setting_receipt(change)
+
+    def set_subscription_enabled(self, params, request_id, account_uid=""):
+        with self.lock:
+            request = SubscriptionSwitchRequest.model_validate(
+                dict(
+                    params,
+                    profile_id=self.current_profile().profile_id,
+                    request_id=request_id,
+                    account_uid=account_uid,
+                )
+            )
+            change = self.settings_service().set_subscription_enabled(request)
+            result = self.setting_receipt(change)
+            result["needs_collection"] = bool(params["enabled"] and change.changed_fields)
+            result["next_action"] = "refresh_collection" if result["needs_collection"] else "none"
+            return result
 
     def undo_settings(self, params, request_id):
         with self.lock:

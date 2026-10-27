@@ -4,6 +4,8 @@ from .errors import MESSAGES, sanitize_details
 
 MESSAGES.update(
     {
+        "SUBSCRIPTION_KEYWORDS_REQUIRED": "请先添加长期关键词，再开启关键词来源。",
+        "SUBSCRIPTION_NOT_FOUND": "未找到这个UP订阅，请先在页面添加对应UID。",
         "INVALID_ARGUMENT": "接口参数未通过校验。",
         "QUERY_TERMS_REQUIRED": "查询必须由宿主提供至少一个有效 terms 关键词；不会从 question 自动生成关键词。",
         "PROFILE_SCOPE_DENIED": "请求不属于宿主授权的当前档案。",

@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from test_official import official_event
 from test_smoke import Model, video
-from test_users import invoke
+from test_users import event, invoke
 from test_users import plugin as shared_plugin
 
 plugin = shared_plugin
@@ -44,6 +44,8 @@ window.AstrBotPluginView = {
 @pytest.mark.asyncio
 async def test_chromium_gui_settings_collection_feedback_and_user_isolation(plugin):
     playwright = pytest.importorskip("playwright.async_api")
+    await plugin.users.chat(event("10001"))
+    plugin.users.settings = replace(plugin.settings, dashboard_bindings="10001")
     app = FastAPI()
 
     @app.api_route("/backend/{endpoint:path}", methods=["GET", "POST"])
@@ -113,7 +115,7 @@ async def test_chromium_gui_settings_collection_feedback_and_user_isolation(plug
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 await page.goto(base)
                 await playwright.expect(page.locator("#bilibili-account-status")).to_contain_text(
-                    "此档案未获账号托管权限"
+                    "尚未登录"
                 )
                 await page.locator('[data-view="sources"]').first.click()
                 await playwright.expect(page.locator("#save-sources")).to_be_enabled()
@@ -148,9 +150,9 @@ async def test_chromium_gui_settings_collection_feedback_and_user_isolation(plug
                 )
                 other = await editor.request.get(base + "/backend/state")
                 other_data = await other.json()
-                assert other_data["profile"]["keywords"] == [] and not other_data["runs"]
+                assert other_data["profile"]["keywords"] == ["Codex"] and other_data["runs"]
                 denied = await editor.request.get(base + "/backend/runs/" + run_id + "/download")
-                assert denied.status != 200
+                assert denied.status == 200
                 assert (
                     await page.request.get(base + "/backend/state?user_id=foreign")
                 ).status == 400
@@ -158,6 +160,7 @@ async def test_chromium_gui_settings_collection_feedback_and_user_isolation(plug
                 assert (await outsider.request.get(base + "/backend/state")).status == 403
 
                 who, _ = official_event()
+                plugin.context._config["admins_id"].append("OPENID_USER_A")
                 original = await invoke(plugin, who, "get_settings")
                 await invoke(
                     plugin,
@@ -168,7 +171,7 @@ async def test_chromium_gui_settings_collection_feedback_and_user_isolation(plug
                 )
                 plugin.users.settings = replace(
                     plugin.settings,
-                    dashboard_bindings=("admin|qq_official|official-instance|OPENID_USER_A",),
+                    dashboard_bindings=who.unified_msg_origin,
                 )
                 await page.reload()
                 await page.locator('[data-view="sources"]').first.click()

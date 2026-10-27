@@ -396,6 +396,51 @@ class SettingsService:
                     store.db.rollback()
                 raise
 
+    def set_subscription_enabled(self, request):
+        payload_hash = digest(request.model_dump_json())
+        with closing(Store(self.db_path, clock=self.clock, rebuild_preferences=False)) as store:
+            recover_pending(store)
+            store.db.execute("BEGIN IMMEDIATE")
+            try:
+                before = self.load()
+                if before.profile_id != request.profile_id:
+                    raise CoreError("PROFILE_SCOPE_DENIED")
+                space = scope(self.path, before.profile_id, before.account_scope)
+                replay = self._replay(store, space, request.request_id, payload_hash)
+                if replay:
+                    store.db.rollback()
+                    return replay
+                if version(before) != request.expected_version:
+                    raise CoreError("SETTINGS_CONFLICT")
+                if _pending_busy(store.db):
+                    raise CoreError("SETTINGS_BUSY")
+                data = before.model_dump()
+                plan = data["source_plan"]
+                if request.source == "keyword_search":
+                    if request.enabled and not before.keywords:
+                        raise CoreError("SUBSCRIPTION_KEYWORDS_REQUIRED")
+                    plan["keyword_search"]["enabled"] = request.enabled
+                elif request.source == "up":
+                    target = next((u for u in plan["ups"] if u["uid"] == request.up_uid), None)
+                    if target is None:
+                        raise CoreError("SUBSCRIPTION_NOT_FOUND")
+                    target["enabled"] = request.enabled
+                else:
+                    target = plan["following"]
+                    if request.enabled:
+                        if not request.account_uid or request.account_uid != before.account_scope:
+                            raise CoreError("PROFILE_SCOPE_DENIED")
+                        target["uid"] = request.account_uid
+                    target["enabled"] = request.enabled
+                    if request.following_scope is not None:
+                        target["scope"] = request.following_scope
+                after = Profile.model_validate(data)
+                return self._commit(store, before, after, request.request_id, payload_hash)
+            except Exception:
+                if store.db.in_transaction:
+                    store.db.rollback()
+                raise
+
     def web_update(self, body):
         payload_hash = digest(dump(body))
         key = body.get("request_id") or uuid.uuid4().hex

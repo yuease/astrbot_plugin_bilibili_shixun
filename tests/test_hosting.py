@@ -94,13 +94,16 @@ async def test_default_denial_happens_before_notice_or_network(plugin):
 
 
 @pytest.mark.asyncio
-async def test_dashboard_binding_does_not_grant_hosting(plugin):
+async def test_dashboard_binding_rejects_non_admin_even_if_hosting_allowed(plugin):
+    await plugin.users.chat(event())
     plugin.users.settings = replace(
-        plugin.settings, dashboard_bindings=("admin|aiocqhttp|bot-1|20001",)
+        plugin.settings,
+        dashboard_bindings="20001",
+        account_hosting_users=("aiocqhttp|bot-1|20001",),
     )
-    app = await plugin.users.dashboard("admin")
-    assert not app.login.hosting_allowed()
-    assert app.identity == chat_identity(event())
+    with pytest.raises(PluginError) as denied:
+        await plugin.users.dashboard("admin")
+    assert denied.value.code == "DASHBOARD_BINDING_NOT_FOUND"
 
 
 @pytest.mark.asyncio
