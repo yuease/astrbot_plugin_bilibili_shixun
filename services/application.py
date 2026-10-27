@@ -22,8 +22,18 @@ from .runtime import Runtime
 
 class Application:
     def __init__(
-        self, root, context, settings, logger, *, source_gate=None, model_gate=None, umo=None
+        self,
+        root,
+        context,
+        settings,
+        logger,
+        *,
+        source_gate=None,
+        model_gate=None,
+        umo=None,
+        identity=None,
     ):
+        self.identity = identity
         self.root, self.context, self.settings, self.logger = root, context, settings, logger
         self.source_gate, self.model_gate, self.umo = source_gate, model_gate, umo
         self.runtime, self.jobs, self.lease = (
@@ -68,6 +78,7 @@ class Application:
             if self.closing:
                 raise PluginError("PLUGIN_CLOSED", status=503)
             if self.started:
+                await self.login.enforce_policy()
                 return
             lease_task = asyncio.create_task(asyncio.to_thread(self.lease.acquire))
             try:
@@ -76,7 +87,12 @@ class Application:
                 await self.io(self.jobs.initialize)
                 loop = asyncio.get_running_loop()
                 self.login = BilibiliLogin(
-                    self.root, self.context, self.settings, self.logger, self.install_account
+                    self.root,
+                    self.context,
+                    self.settings,
+                    self.logger,
+                    self.install_account,
+                    identity=self.identity,
                 )
                 await self.login.start()
                 await self.io(self.runtime.bind_account, self.login.public_state().get("uid") or "")
@@ -108,6 +124,7 @@ class Application:
         async with self.lock:
             result = await self.io(self.runtime.get_settings)
             job = await self.io(self.jobs.latest, "collect", self.runtime.account_scope)
+            result["account_hosting"] = self.login.hosting_state()
             result["collection_status"] = job["status"] if job else "not_started"
             active = [
                 s
@@ -417,6 +434,8 @@ class Application:
             await self.idle.wait()
             async with self.lock:
                 if self.active is None:
+                    if uid:
+                        self.login.require_hosting()
                     await self.io(self.runtime.bind_account, uid)
                     return
         raise PluginError("PLUGIN_CLOSED")
@@ -475,6 +494,8 @@ class Application:
             if self.login.authenticating:
                 raise PluginError("BILI_LOGIN_BUSY")
             requires_login = any(ref["kind"] != "keyword_search" for ref in subscriptions(profile))
+            if operation == "collect" and requires_login:
+                self.login.require_hosting()
             if operation == "collect" and requires_login and not self.login.uid:
                 raise PluginError("BILI_LOGIN_REQUIRED")
             if reuse_collection and self.active is not None:

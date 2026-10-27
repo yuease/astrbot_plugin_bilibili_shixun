@@ -13,8 +13,13 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from .access import account_hosting_allowed
 from .errors import PluginError, log_failure
 from .qq_platform import QQ_ADAPTERS, QQ_OFFICIAL, official_c2c, qq_message
+
+HOSTING_NOTICE = (
+    "登录凭据会保存在运行机器人的服务器上，服务器运营者可以访问。请仅在信任运营者时扫码。"
+)
 
 PASSPORT = "https://passport.bilibili.com"
 API = "https://api.bilibili.com"
@@ -82,7 +87,8 @@ def write_private(path, value):
 
 
 class BilibiliLogin:
-    def __init__(self, root, context, settings, logger, install_account):
+    def __init__(self, root, context, settings, logger, install_account, *, identity=None):
+        self.identity = identity
         self.path = Path(root) / "account" / "session.json"
         self.context, self.settings, self.logger = context, settings, logger
         self.install_account = install_account
@@ -104,7 +110,67 @@ class BilibiliLogin:
             if not isinstance(value, dict) or not isinstance(value.get("credential"), dict):
                 raise PluginError("BILI_SESSION_INVALID")
             self.state.update(value)
+        await self.enforce_policy(rebind=False)
         self.monitor_task = asyncio.create_task(self._monitor())
+
+    def hosting_allowed(self, owner=None):
+        return account_hosting_allowed(
+            self.identity if self.identity is not None else (owner or self.state.get("owner")),
+            self.context,
+            self.settings,
+        )
+
+    def require_hosting(self, owner=None):
+        if not self.hosting_allowed(owner):
+            raise PluginError("ACCOUNT_HOSTING_DENIED", status=403)
+
+    def hosting_state(self):
+        return {
+            "allowed": self.hosting_allowed(),
+            "admin_only": self.settings.account_hosting_admin_only,
+        }
+
+    async def enforce_policy(self, *, rebind=True):
+        if self.hosting_allowed():
+            return
+        changed = False
+        async with self.lock:
+            if (
+                self.state.get("credential")
+                or self.state.get("owner")
+                or self.state.get("uid")
+                or self.pending
+            ):
+                self.pending = None
+                self.state = {
+                    "status": "not_logged_in",
+                    "credential": {},
+                    "owner": None,
+                    "revision": "",
+                }
+                await self.persist()
+                self.client.cookies.clear()
+                changed = True
+        if changed and rebind:
+            await self.install_account("")
+
+    async def _privacy_notice(self, owner, event):
+        path = self.path.with_name("privacy_notice.json")
+        try:
+            shown = (
+                json.loads(await asyncio.to_thread(path.read_text, encoding="utf-8")).get("version")
+                == 1
+            )
+        except (OSError, ValueError, AttributeError):
+            shown = False
+        if not shown:
+            await self._send(owner, HOSTING_NOTICE, event=event)
+            task = asyncio.create_task(asyncio.to_thread(write_private, path, {"version": 1}))
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                await task
+                raise
 
     async def persist(self):
         # All callers hold self.lock; writes are never run in an abandoned thread.
@@ -130,12 +196,14 @@ class BilibiliLogin:
     def credentials(self):
         from bilibili_api import Credential
 
+        self.require_hosting()
         if not self.uid or not self.state["credential"].get("sessdata"):
             raise PluginError("BILI_LOGIN_REQUIRED")
         return Credential(**self.state["credential"])
 
     def public_state(self):
         return {
+            "account_hosting": self.hosting_state(),
             "status": self.state.get("status", "not_logged_in"),
             "uid": self.state.get("uid"),
             "name": self.state.get("name"),
@@ -203,6 +271,11 @@ class BilibiliLogin:
         async with self.lock:
             if self.closing:
                 raise PluginError("PLUGIN_CLOSED")
+            self.require_hosting(owner)
+            if self.identity is not None and any(
+                self.identity.get(k) != owner[k] for k in ("adapter", "platform_id", "sender")
+            ):
+                raise PluginError("ACCESS_DENIED", status=403)
             bound = self.state.get("owner")
             if bound and (bound["sender"], bound["platform_id"]) != (
                 owner["sender"],
@@ -221,6 +294,8 @@ class BilibiliLogin:
                 if owner["adapter"] in QQ_OFFICIAL:
                     return "当前二维码已重新提交给官方适配器，等待扫码；未生成新二维码。"
                 return "二维码已发送，等待 B 站 App 确认。"
+            await self._privacy_notice(owner, event)
+            self.require_hosting(owner)
             async with httpx.AsyncClient(
                 headers=HEADERS, timeout=15, follow_redirects=False, trust_env=False
             ) as client:
@@ -243,6 +318,7 @@ class BilibiliLogin:
                 return output.getvalue()
 
             png = await asyncio.to_thread(render)
+            self.require_hosting(owner)
             if self.closing:
                 raise PluginError("PLUGIN_CLOSED")
             pending = {
@@ -284,6 +360,9 @@ class BilibiliLogin:
             ) as client:
                 while not self.closing and time.monotonic() < pending["deadline"]:
                     await asyncio.sleep(3)
+                    self.require_hosting(owner)
+                    if self.pending is not pending:
+                        return
                     try:
                         response = await client.get(
                             PASSPORT + "/x/passport-login/web/qrcode/poll",
@@ -330,26 +409,31 @@ class BilibiliLogin:
                     )
                     if not self._authorized(owner):
                         raise PluginError("ACCESS_DENIED", status=403)
+                    self.require_hosting(owner)
                     await self.install_account(uid)
                     async with self.lock:
-                        if (
+                        rejected = (
                             self.closing
                             or self.pending is not pending
                             or not self._authorized(owner)
-                        ):
-                            return
-                        self.state.update(
-                            status="valid",
-                            credential=credential,
-                            uid=uid,
-                            name=str(data.get("uname", ""))[:100],
-                            owner=owner,
-                            revision=uuid.uuid4().hex,
-                            last_checked_at=now(),
-                            notified_revision=None,
-                            login_notice_failed=False,
+                            or not self.hosting_allowed(owner)
                         )
-                        await self.persist()
+                        if not rejected:
+                            self.state.update(
+                                status="valid",
+                                credential=credential,
+                                uid=uid,
+                                name=str(data.get("uname", ""))[:100],
+                                owner=owner,
+                                revision=uuid.uuid4().hex,
+                                last_checked_at=now(),
+                                notified_revision=None,
+                                login_notice_failed=False,
+                            )
+                            await self.persist()
+                    if rejected:
+                        await self.install_account("")
+                        return
                     try:
                         await self._send(
                             owner,
@@ -395,6 +479,7 @@ class BilibiliLogin:
             await self.persist()
 
     async def check(self):
+        await self.enforce_policy()
         async with self.lock:
             cookie = dict(self.state.get("credential", {}))
             revision = self.revision
@@ -420,6 +505,7 @@ class BilibiliLogin:
         next_check = time.monotonic() + 10
         while not self.stop.is_set():
             try:
+                await self.enforce_policy()
                 if time.monotonic() >= next_check:
                     next_check = time.monotonic() + self.settings.bili_check_interval_minutes * 60
                     await self.check()

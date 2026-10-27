@@ -188,6 +188,8 @@ class BilibiliSource:
                         raise SourceError("SOURCE_DEBUG_LOGGING")
                     credential = Credential() if public_keyword else self.login.credentials()
                     await asyncio.sleep(max(0, 1.0 - (time.monotonic() - self.last_request)))
+                    if not public_keyword:
+                        self.login.require_hosting()
                     self.last_request = time.monotonic()
                     kind = ref["kind"]
                     if kind == "keyword_search":

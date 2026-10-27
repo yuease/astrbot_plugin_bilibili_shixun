@@ -92,3 +92,35 @@ class ReadBudget:
         self.messages.move_to_end(message)
         while len(self.messages) > 1024:
             self.messages.popitem(last=False)
+
+
+def account_hosting_allowed(identity, context, settings):
+    """Trust only the owning chat identity and contextual framework admin config."""
+    from astrbot.core.platform.message_session import MessageSession
+    from astrbot.core.platform.message_type import MessageType
+
+    from .qq_platform import QQ_ADAPTERS
+
+    try:
+        if not identity or identity.get("kind", "chat") != "chat":
+            return False
+        adapter, platform, sender = (identity[k] for k in ("adapter", "platform_id", "sender"))
+        if adapter not in QQ_ADAPTERS or any(
+            not isinstance(v, str) or not v.strip() or "|" in v for v in (adapter, platform, sender)
+        ):
+            return False
+        umo = str(
+            MessageSession(
+                platform_name=platform, message_type=MessageType.FRIEND_MESSAGE, session_id=sender
+            )
+        )
+        admins = {str(v) for v in context.get_config(umo).get("admins_id", [])}
+        if not settings.allow_private_users and sender not in admins:
+            return False
+        return (
+            not settings.account_hosting_admin_only
+            or sender in admins
+            or "|".join((adapter, platform, sender)) in settings.account_hosting_users
+        )
+    except Exception:
+        return False

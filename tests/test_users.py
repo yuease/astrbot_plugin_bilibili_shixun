@@ -213,7 +213,7 @@ async def test_dashboard_identity_is_separate_and_binding_is_explicit(plugin, mo
 
 @pytest.mark.asyncio
 async def test_registry_restores_personal_settings_logins_and_background_tasks(plugin):
-    a = await plugin.users.chat(event())
+    a = await plugin.users.chat(event("10001"))
     current = await a.tool("get_settings", {})
     await a.change_settings(
         "update_settings",
@@ -226,7 +226,7 @@ async def test_registry_restores_personal_settings_logins_and_background_tasks(p
     restored = UserApplications(plugin.users.root, plugin.context, plugin.settings, LOGGER)
     try:
         await restored.start()
-        same = await restored.chat(event())
+        same = await restored.chat(event("10001"))
         assert (await same.tool("get_settings", {}))["settings"]["keywords"] == ["Codex"]
         assert same.login.uid == "1001" and not same.scheduler.done()
         other = await restored.chat(event("20002"))

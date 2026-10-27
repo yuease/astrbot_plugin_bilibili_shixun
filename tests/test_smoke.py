@@ -277,7 +277,8 @@ async def test_qr_login_set_cookie_persistence_and_logout(tmp_path, monkeypatch,
         assert "synthetic-session" not in json.dumps(login.public_state())
         saved = json.loads(login.path.read_text(encoding="utf-8"))
         assert saved["credential"]["sessdata"] == "synthetic-session"
-        image = event.send.call_args_list[0].args[0].chain[1]
+        assert event.send.call_args_list[0].args[0].chain[0].text == login_module.HOSTING_NOTICE
+        image = event.send.call_args_list[1].args[0].chain[1]
         assert image.file.startswith("base64://")
         await login.logout(event)
         assert login.uid == "" and installed[-1] == ""
@@ -349,7 +350,19 @@ async def test_health_http_failure_does_not_expire_cookie(tmp_path, monkeypatch)
         "AsyncClient",
         offline_client(lambda request: httpx.Response(response["status"], json=response["body"])),
     )
-    login = login_module.BilibiliLogin(tmp_path, None, Settings(), LOGGER, AsyncMock())
+    login = login_module.BilibiliLogin(
+        tmp_path,
+        SimpleNamespace(get_config=lambda *a: {"admins_id": ["10001"]}),
+        Settings(),
+        LOGGER,
+        AsyncMock(),
+        identity={
+            "kind": "chat",
+            "adapter": "aiocqhttp",
+            "platform_id": "smoke-qq",
+            "sender": "10001",
+        },
+    )
     login.state.update(
         status="valid", uid="1001", revision="first", credential={"sessdata": "synthetic"}
     )
@@ -446,6 +459,7 @@ async def test_five_routes_use_installed_sdk_contracts(monkeypatch):
     monkeypatch.setattr(Api, "request", request)
     monkeypatch.setattr(user.User, "get_access_id", AsyncMock(return_value="offline"))
     login = SimpleNamespace(
+        require_hosting=lambda: None,
         uid="1001",
         revision="revision",
         credentials=lambda: Credential(

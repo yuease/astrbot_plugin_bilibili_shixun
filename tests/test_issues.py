@@ -434,7 +434,10 @@ async def test_sdk_poll_enrichment_is_bounded_and_failure_preserves_feed(monkeyp
 
     monkeypatch.setattr(Api, "request", request)
     login = SimpleNamespace(
-        uid="1001", revision="first", credentials=lambda: Credential(sessdata="synthetic")
+        uid="1001",
+        revision="first",
+        credentials=lambda: Credential(sessdata="synthetic"),
+        require_hosting=lambda: None,
     )
     source = BilibiliSource(asyncio.get_running_loop(), login, LOGGER)
     first = await source._fetch({"kind": "following_dynamics", "key": "1001"}, "1001", None, 10)

@@ -112,6 +112,9 @@ async def test_chromium_gui_settings_collection_feedback_and_user_isolation(plug
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 await page.goto(base)
+                await playwright.expect(page.locator("#bilibili-account-status")).to_contain_text(
+                    "此档案未获账号托管权限"
+                )
                 await page.locator('[data-view="sources"]').first.click()
                 await playwright.expect(page.locator("#save-sources")).to_be_enabled()
                 await page.locator("#source-keyword-enabled").check()

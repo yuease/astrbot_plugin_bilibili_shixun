@@ -105,6 +105,7 @@ class UserApplications:
                 source_gate=self.source_gate,
                 model_gate=self.model_gate,
                 umo=self._umo(identity),
+                identity=dict(identity),
             )
             try:
                 await app.start()

@@ -109,7 +109,7 @@ class BilibiliShixunPlugin(Star):
             log_failure(self.logger, "initialize", "startup", exc)
             raise
         self.logger.info(
-            "B站拾讯 v0.9.1 initialized; registered %s tools: %s",
+            "B站拾讯 v0.10.0 initialized; registered %s tools: %s",
             len(self.tools),
             ", ".join(tool.name for tool in self.tools),
         )
@@ -196,7 +196,9 @@ class BilibiliShixunPlugin(Star):
                 message = "B 站：" + labels.get(result["status"], "状态待确认")
                 if result.get("uid"):
                     message += "\nUID：" + str(result["uid"])
-                if event.get_platform_name() in QQ_OFFICIAL:
+                if not result["account_hosting"]["allowed"]:
+                    message += "\n此档案未获账号托管权限；公开搜索、个人关键词和兴趣可正常使用。"
+                elif event.get_platform_name() in QQ_OFFICIAL:
                     message += (
                         "\n失效时在下次使用插件时提示，不主动推送二维码；请在本私聊发送 /B站登录。"
                     )

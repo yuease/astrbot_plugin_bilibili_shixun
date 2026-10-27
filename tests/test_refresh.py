@@ -20,7 +20,18 @@ async def app(tmp_path):
     context = SimpleNamespace(
         get_config=lambda *args: {"admins_id": ["10001"]}, llm_generate=AsyncMock()
     )
-    value = Application(tmp_path, context, Settings(), LOGGER)
+    value = Application(
+        tmp_path,
+        context,
+        Settings(),
+        LOGGER,
+        identity={
+            "kind": "chat",
+            "adapter": "aiocqhttp",
+            "platform_id": "test-bot",
+            "sender": "10001",
+        },
+    )
     await value.start()
     await value.io(seed, value.runtime)
     value.login.state.update(status="valid", uid="1001")

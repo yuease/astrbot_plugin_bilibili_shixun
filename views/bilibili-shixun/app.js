@@ -51,6 +51,7 @@ function renderAccount(){
  if(!el)return;
  const labels={valid:'已登录',expired:'登录已失效',not_logged_in:'尚未登录'};
  el.textContent=account?.qr_pending?'等待 QQ 中的二维码扫码确认。':(labels[account?.status]||'状态待确认')+(account?.uid?' · UID '+account.uid:'')+(!account?.notification_bound?'':account?.notification_mode==='on_use'?' · 登录失效时在下次使用插件时提示':account?.auto_relogin?' · OneBot登录失效时自动提醒':' · 自动提醒关闭');
+ if(account?.account_hosting?.allowed===false){el.textContent+='。此档案未获账号托管权限；公开搜索、个人关键词和兴趣可正常使用。';return;}
  if(account?.notification_bound&&!account?.proactive_supported)el.textContent+='。QQ官方机器人在下次使用插件时提示登录失效，不主动推送二维码；请在私聊发送 /B站登录。';
 }
 function followingStatus(){
@@ -58,7 +59,7 @@ function followingStatus(){
   const kind=$('#following-mode')?.value==='dynamics'?'following_dynamics':'following_videos';
   const entry=(state?.source_status||[]).find(s=>s.kind===kind&&s.key===uid);
   const labels={ready:'最近检查可用',configured:'登录配置已提供，尚未验证可用性',missing_credentials:'尚未配置对应账号的登录信息',auth_expired:'登录已过期，请在 QQ 私聊发送 /B站登录',error:'最近采集失败，请检查 B 站登录和网络',unknown:'登录状态尚未检查',disabled:'当前未启用'};
-  $('#following-status').textContent=kind==='following_dynamics'&&!sourceReady()?'综合动态等待接入；视频来源的检查结果不代表此来源可用':!hasSources()?'等待后端接入；尚未检查登录状态':!uid?'请先在 QQ 私聊发送 /B站登录':labels[entry?.status]||labels.unknown;
+  $('#following-status').textContent=state?.bilibili_account?.account_hosting?.allowed===false?'此档案未获账号托管权限；请联系管理员授权。':kind==='following_dynamics'&&!sourceReady()?'综合动态等待接入；视频来源的检查结果不代表此来源可用':!hasSources()?'等待后端接入；尚未检查登录状态':!uid?'请先在 QQ 私聊发送 /B站登录':labels[entry?.status]||labels.unknown;
 }
 const statusNames = {collection:'采集完成',completed:'已生成', empty:'暂无推荐', preview:'采集预览', failed:'运行失败', started:'正在采集', collected:'正在处理'};
 const feedbackNames = {useful:'有用', not_useful:'没用', later:'暂时不想看'};

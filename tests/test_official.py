@@ -132,6 +132,7 @@ async def test_two_official_users_do_not_share_preferences_or_login_notices(plug
     )
     assert changed["settings_saved"]
     app_a = await plugin.users.chat(a)
+    plugin.context._config["admins_id"].append("OPENID_USER_A")
     app_a.login.state.update(status="expired", uid="123", credential={"sessdata": "synthetic-only"})
     a_status = await invoke(plugin, a, "get_source_status")
     b_status = await invoke(plugin, b, "get_settings")
@@ -181,13 +182,16 @@ async def test_qr_login_through_real_official_adapter(tmp_path, monkeypatch, ada
     monkeypatch.setattr(login_module.asyncio, "sleep", fast_sleep)
     context = SimpleNamespace(get_config=lambda *args: {"admins_id": []}, send_message=AsyncMock())
     install = AsyncMock()
-    login = login_module.BilibiliLogin(tmp_path, context, Settings(), LOGGER, install)
+    login = login_module.BilibiliLogin(
+        tmp_path, context, Settings(account_hosting_admin_only=False), LOGGER, install
+    )
     event, outgoing = official_event(adapter)
     try:
         await login.request_login(event)
         await asyncio.wait_for(login.poll_task, 4)
-        assert outgoing[0][0].endswith("/files")
-        assert base64.b64decode(outgoing[0][2]["file_data"]).startswith(b"\x89PNG")
+        assert login_module.HOSTING_NOTICE in outgoing[0][2]["content"]
+        assert outgoing[1][0].endswith("/files")
+        assert base64.b64decode(outgoing[1][2]["file_data"]).startswith(b"\x89PNG")
         assert all(c[1]["openid"] == "OPENID_USER_A" for c in outgoing)
         assert all(c[2].get("markdown") is None for c in outgoing)
         assert context.send_message.await_count == 0
@@ -253,7 +257,7 @@ async def test_successful_login_is_not_rolled_back_when_result_delivery_fails(
     login = login_module.BilibiliLogin(
         tmp_path,
         SimpleNamespace(get_config=lambda *args: {"admins_id": []}),
-        Settings(),
+        Settings(account_hosting_admin_only=False),
         LOGGER,
         AsyncMock(),
     )
@@ -271,7 +275,9 @@ async def test_successful_login_is_not_rolled_back_when_result_delivery_fails(
 @pytest.mark.parametrize("adapter", ADAPTERS)
 async def test_official_expiry_monitor_never_pushes_qr(tmp_path, adapter):
     context = SimpleNamespace(get_config=lambda *args: {"admins_id": []}, send_message=AsyncMock())
-    login = login_module.BilibiliLogin(tmp_path, context, Settings(), LOGGER, AsyncMock())
+    login = login_module.BilibiliLogin(
+        tmp_path, context, Settings(account_hosting_admin_only=False), LOGGER, AsyncMock()
+    )
     event, _ = official_event(adapter)
     login.state.update(
         status="expired",
@@ -381,7 +387,11 @@ async def test_owner_checks_prevent_sending_or_logging_out_other_user(tmp_path, 
     a, calls_a = official_event(adapter)
     b, calls_b = official_event(adapter, "OPENID_USER_B")
     login = login_module.BilibiliLogin(
-        tmp_path, SimpleNamespace(get_config=lambda *a: {}), Settings(), LOGGER, AsyncMock()
+        tmp_path,
+        SimpleNamespace(get_config=lambda *a: {}),
+        Settings(account_hosting_admin_only=False),
+        LOGGER,
+        AsyncMock(),
     )
     login.state.update(
         status="valid", uid="1001", owner=login._owner(a), credential={"sessdata": "synthetic"}
@@ -487,7 +497,11 @@ async def test_repeated_official_login_reuses_live_qr_without_claiming_delivery(
     monkeypatch.setattr(login_module.httpx, "AsyncClient", offline_client(response))
     event, calls = official_event(adapter)
     login = login_module.BilibiliLogin(
-        tmp_path, SimpleNamespace(get_config=lambda *a: {}), Settings(), LOGGER, AsyncMock()
+        tmp_path,
+        SimpleNamespace(get_config=lambda *a: {}),
+        Settings(account_hosting_admin_only=False),
+        LOGGER,
+        AsyncMock(),
     )
     try:
         first = await login.request_login(event)

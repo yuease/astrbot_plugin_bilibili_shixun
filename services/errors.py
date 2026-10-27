@@ -4,6 +4,7 @@ from pathlib import Path
 from traceback import extract_tb
 
 MESSAGES = {
+    "ACCOUNT_HOSTING_DENIED": "账号托管仅向管理员或获授权的可信用户开放，请联系管理员。公开搜索、个人关键词和兴趣仍可使用。",
     "INVALID_ARGUMENT": "参数无效，请检查字段、日期和数值范围。",
     "ACCESS_DENIED": "此操作仅允许获准的私聊用户使用；群聊禁用，请检查插件访问设置。",
     "USER_LIMIT": "个人档案数量已达管理员配置上限，请联系管理员。",

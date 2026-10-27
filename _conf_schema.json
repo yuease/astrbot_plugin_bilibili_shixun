@@ -46,5 +46,17 @@
     "type": "list",
     "default": [],
     "hint": "每项：Dashboard用户名|平台适配器|机器人实例ID|用户ID，例如 admin|aiocqhttp|mybot|123456。仅可信管理员配置；不绑定时每个 Dashboard 账号使用独立档案，不能自动读取聊天用户的数据。 QQ官方机器人的用户ID为OpenID，不是QQ号，可查看实际设置中的user_identity。"
+  },
+  "account_hosting_admin_only": {
+    "description": "账号托管仅限管理员（允许可信名单例外）",
+    "type": "bool",
+    "default": true,
+    "hint": "默认仅管理员及下方明确授权的可信用户可扫码、使用关注等登录来源。关闭后所有获准私聊用户可托管账号；公开搜索、个人关键词和兴趣不受此开关影响。修改后重载插件生效。"
+  },
+  "account_hosting_users": {
+    "description": "允许账号托管的可信用户",
+    "type": "list",
+    "default": [],
+    "hint": "每项：平台适配器|机器人实例ID|用户ID。可从工具返回的 user_identity 获取；QQ官方使用OpenID。仅管理员配置，按完整身份匹配。撤销权限并重载后清除该用户本地凭据，暂停其登录来源；历史保留且不转成公开数据。"
   }
 }
