@@ -3,7 +3,7 @@
     "description": "采集摘要自动带入聊天",
     "type": "bool",
     "default": true,
-    "hint": "在本人私聊中自动带入最新一轮订阅采集摘要，详情仍按需查询。"
+    "hint": "只带入最新一轮首次入库条目，每条仅一次；重载后不重复，详情按需查询。"
   },
   "collection_context_max_chars": {
     "description": "采集摘要长度上限",

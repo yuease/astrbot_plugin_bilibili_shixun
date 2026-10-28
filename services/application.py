@@ -121,19 +121,19 @@ class Application:
             return await self.own(self._settings_read())
         return await self.own(self.io(self.runtime.tool, operation, params))
 
-    async def collection_context(self):
+    async def collection_context(self, previous=None):
         await self.start()
-        return await self.own(self._collection_context())
+        return await self.own(self._collection_context(previous))
 
-    async def _collection_context(self):
+    async def _collection_context(self, previous):
         async with self.lock:
             # Collection writes batches incrementally; expose only a settled run.
             if self.active is not None:
-                return ""
+                return None
             job = await self.io(self.jobs.latest, "collect", self.runtime.account_scope)
             if job is None or job["status"] != "completed":
-                return ""
-            return await self.io(collection_context, self.runtime, job)
+                return None
+            return await self.io(collection_context, self.runtime, job, previous)
 
     async def _settings_read(self):
         async with self.lock:

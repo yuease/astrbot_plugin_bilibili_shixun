@@ -204,10 +204,13 @@ class BilibiliShixunPlugin(Star):
             application = self.users.apps.get(user_key(chat_identity(event)))
             if application is None:
                 return
-            block = await application.collection_context()
-            if block:
-                req.system_prompt = (req.system_prompt or "") + block
-                req._bilibili_collection_context = block
+            receipt = await application.collection_context(
+                getattr(req, "_bilibili_collection_receipt", None)
+            )
+            if receipt:
+                req.system_prompt = (req.system_prompt or "") + receipt["block"]
+                req._bilibili_collection_context = receipt["block"]
+                req._bilibili_collection_receipt = receipt
         except PluginError:
             return
         except Exception as exc:

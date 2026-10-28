@@ -99,6 +99,8 @@ class Store:
         CREATE TABLE IF NOT EXISTS preference_heads(context TEXT PRIMARY KEY, version INTEGER REFERENCES preference_snapshots(version));
         CREATE TABLE IF NOT EXISTS preference_evidence(version INTEGER REFERENCES preference_snapshots(version), feature TEXT, data TEXT);
         CREATE TABLE IF NOT EXISTS source_scans(namespace TEXT,kind TEXT,source_key TEXT,checked TEXT,data TEXT,PRIMARY KEY(namespace,kind,source_key));
+        CREATE TABLE IF NOT EXISTS collection_context_consumed(
+          namespace TEXT,item_id TEXT,run_id TEXT,injected_at TEXT,PRIMARY KEY(namespace,item_id));
         """)
         if "pinned" not in {r[1] for r in self.db.execute("PRAGMA table_info(preference_heads)")}:
             self.db.execute(
